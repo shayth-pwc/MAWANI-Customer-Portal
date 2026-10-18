@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="certificate-01">
+<path id="Accent" d="M17.3333 53.3333H13.3333C10.3878 53.3333 8 50.9455 8 48V10.6667C8 7.72115 10.3878 5.33333 13.3333 5.33333H50.6667C53.6122 5.33333 56 7.72115 56 10.6667V48C56 50.9455 53.6122 53.3333 50.6667 53.3333H46.6667" stroke="#00A6BC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Icon" d="M32 50.6667C36.4183 50.6667 40 47.0849 40 42.6667C40 38.2484 36.4183 34.6667 32 34.6667C27.5817 34.6667 24 38.2484 24 42.6667C24 47.0849 27.5817 50.6667 32 50.6667ZM32 50.6667L32.0572 50.6661L23.5431 59.1802L16.0007 51.6377L24.0524 43.5859M32 50.6667L40.5142 59.1802L48.0566 51.6377L40.0049 43.5859M24 16H40M18.6667 25.3333H45.3333" stroke="#008BA1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

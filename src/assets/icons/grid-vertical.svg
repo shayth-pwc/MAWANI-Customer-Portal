@@ -1,0 +1,29 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="768" height="768" viewBox="0 0 768 768" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Vertical">
+<g clip-path="url(#clip0_0_112)">
+<line id="Line" x1="0.5" x2="0.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_2" x1="48.5" x2="48.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_3" x1="96.5" x2="96.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_4" x1="144.5" x2="144.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_5" x1="192.5" x2="192.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_6" x1="240.5" x2="240.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_7" x1="288.5" x2="288.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_8" x1="336.5" x2="336.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_9" x1="384.5" x2="384.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_10" x1="432.5" x2="432.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_11" x1="480.5" x2="480.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_12" x1="528.5" x2="528.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_13" x1="576.5" x2="576.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_14" x1="624.5" x2="624.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_15" x1="672.5" x2="672.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_16" x1="720.5" x2="720.5" y2="768" stroke="#EAECF5"/>
+<line id="Line_17" x1="768.5" x2="768.5" y2="768" stroke="#EAECF5"/>
+</g>
+<rect x="0.5" y="0.5" width="767" height="767" stroke="#EAECF5"/>
+</g>
+<defs>
+<clipPath id="clip0_0_112">
+<rect width="768" height="768" fill="white"/>
+</clipPath>
+</defs>
+</svg>

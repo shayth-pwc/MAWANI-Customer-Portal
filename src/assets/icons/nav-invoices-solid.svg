@@ -1,0 +1,10 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<clipPath id="coin-gap">
+<circle cx="7.15" cy="12.7" r="6.15"/>
+</clipPath>
+</defs>
+<circle cx="7.15" cy="12.7" r="4.85" fill="#1B8354"/>
+<circle cx="12.7" cy="7.15" r="4.85" fill="#1B8354"/>
+<circle cx="12.7" cy="7.15" r="4.85" fill="none" stroke="#F5F5F5" stroke-width="1.35" clip-path="url(#coin-gap)"/>
+</svg>
