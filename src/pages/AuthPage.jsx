@@ -58,15 +58,39 @@ export default function AuthPage({ mode = 'login' }) {
 
   const title = forgot ? 'forgotTitle' : signup ? 'signUpTitle' : 'signInTitle'
   const body = forgot ? 'forgotBody' : signup ? 'signUpBody' : 'signInBody'
+  const loginReady = Boolean(email.trim() && password)
 
   return (
-    <div className="min-h-screen bg-[#eef1f4] p-3 sm:p-5">
-      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1440px] bg-white sm:min-h-[calc(100vh-2.5rem)]">
-        <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-s-[28px] bg-gradient-to-b from-brand-25 to-white px-6 py-7 sm:px-10 lg:px-14">
-          <img src={images.logo} alt="Mawani" className="h-10 w-auto max-w-[180px] self-start object-contain object-start" />
+    <div className="min-h-screen bg-white lg:bg-[#eef1f4] lg:p-3 xl:p-5">
+      <div className="mx-auto flex min-h-screen max-w-[1440px] bg-white lg:min-h-[calc(100vh-1.5rem)] xl:min-h-[calc(100vh-2.5rem)]">
+        <section className="relative flex min-w-0 flex-1 flex-col overflow-hidden px-5 py-6 sm:px-8 lg:rounded-s-[28px] lg:bg-gradient-to-b lg:from-brand-25 lg:to-white lg:px-10 lg:py-7 xl:px-14">
+          <div className="relative">
+            <img
+              src={images.logo}
+              alt="Mawani"
+              className="mx-auto h-10 w-auto max-w-[180px] object-contain object-center lg:mx-0 lg:object-start"
+            />
+            <button
+              type="button"
+              className="absolute end-0 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-tertiary lg:hidden"
+              onClick={toggleLanguage}
+            >
+              {language === 'ar' ? 'English' : 'العربية'}
+            </button>
+          </div>
+
+          {mode === 'login' ? (
+            <div className="relative mt-6 overflow-hidden rounded-2xl lg:hidden">
+              <img src={images.loginPort} alt="" className="h-[180px] w-full object-cover sm:h-[220px]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <p className="absolute inset-x-4 bottom-4 max-w-[240px] text-start text-lg font-semibold leading-6 text-white">
+                {t('loginHero')}
+              </p>
+            </div>
+          ) : null}
 
           <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col">
-            <div className="flex flex-1 flex-col justify-center py-10">
+            <div className="flex flex-1 flex-col justify-center py-8 lg:py-10">
               <h1 className="text-display-sm font-semibold tracking-[-0.02em] text-text-primary">{t(title)}</h1>
               <p className="mt-2 text-md text-text-tertiary">{t(body)}</p>
 
@@ -136,7 +160,7 @@ export default function AuthPage({ mode = 'login' }) {
 
                 {resetSent ? <p className="text-sm text-text-secondary">{t('resetSent')}</p> : null}
 
-                {mode === 'login' && (!email.trim() || !password) ? (
+                {mode === 'login' && !loginReady ? (
                   <button
                     type="submit"
                     disabled
@@ -158,7 +182,7 @@ export default function AuthPage({ mode = 'login' }) {
                   <div className="my-6 h-px bg-border" />
                   <button
                     type="button"
-                    className="mx-auto flex items-center gap-2 text-sm font-semibold text-brand"
+                    className="mx-auto flex items-center gap-2 text-center text-sm font-semibold text-brand"
                     onClick={openAccount}
                     disabled={submitting}
                   >
@@ -183,9 +207,9 @@ export default function AuthPage({ mode = 'login' }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-center gap-4 lg:justify-between">
             <p className="text-xs text-text-placeholder">{t('rightsReserved')}</p>
-            <button type="button" className="text-xs font-semibold text-text-tertiary" onClick={toggleLanguage}>
+            <button type="button" className="hidden text-xs font-semibold text-text-tertiary lg:inline" onClick={toggleLanguage}>
               {language === 'ar' ? 'English' : 'العربية'}
             </button>
           </div>

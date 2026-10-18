@@ -31,6 +31,7 @@ export default function AppLayout() {
   if (!signedIn) return <Navigate to="/login" replace />
 
   const meta = pageMeta[pathname] || { titleKey: 'home', supportingKey: 'summary' }
+  const pageOwnsTitle = pathname === '/licenses' || pathname === '/permits' || pathname === '/visits'
 
   return (
     <div className="flex min-h-screen bg-bg-neutral">
@@ -55,6 +56,7 @@ export default function AppLayout() {
         <TopBar
           title={t(meta.titleKey)}
           supporting={meta.supportingKey ? t(meta.supportingKey) : ''}
+          showHeader={!pageOwnsTitle}
           onToggleMenu={() => setMobileOpen(true)}
           panel={panel}
           setPanel={setPanel}

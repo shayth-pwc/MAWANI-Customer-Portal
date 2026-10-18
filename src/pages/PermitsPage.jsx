@@ -13,7 +13,6 @@ import {
   UNDERTAKING_PREVIEW,
   UPLOAD_HINT,
 } from '../constants/permits'
-import { useClickOutside } from '../hooks/useClickOutside'
 import { useApp } from '../hooks/useApp'
 import { formatNamedDate } from '../utils/formatDate'
 
@@ -91,7 +90,23 @@ export default function PermitsPage() {
   const [toast, setToast] = useState(null)
   const filterRef = useRef(null)
 
-  useClickOutside(filterRef, () => setFiltersOpen(false), filtersOpen)
+  useEffect(() => {
+    if (!filtersOpen) return undefined
+    const onPointer = (event) => {
+      if (!window.matchMedia('(min-width: 1024px)').matches) return
+      if (!filterRef.current || filterRef.current.contains(event.target)) return
+      setFiltersOpen(false)
+    }
+    const onKey = (event) => {
+      if (event.key === 'Escape') setFiltersOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [filtersOpen])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 800)
@@ -146,6 +161,16 @@ export default function PermitsPage() {
     setDrawer({ kind: 'license', from })
   }
 
+  function openFilters() {
+    setDraftFilters(filters)
+    setFiltersOpen((open) => !open)
+  }
+
+  function applyFilters() {
+    setFilters(draftFilters)
+    setFiltersOpen(false)
+  }
+
   return (
     <div className="relative px-4 pb-10 pt-4 md:px-8">
       {toast ? (
@@ -167,44 +192,36 @@ export default function PermitsPage() {
         </div>
       ) : null}
 
+      <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+        <h1 className="text-display-xs font-semibold text-text-primary">{t('permits')}</h1>
+        <button type="button" onClick={() => setModalOpen(true)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+          <PlusIcon /> {t('perNewPermit')}
+        </button>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div className="flex items-end gap-6">
+        <div className="flex items-end gap-4 overflow-x-auto sm:gap-6">
           <TabButton active={tab === 'licenses'} label={t('licenses')} count={licenses.length} onClick={() => setTab('licenses')} />
           <TabButton active={tab === 'permits'} label={t('permits')} count={permits.length} onClick={() => setTab('permits')} />
           <TabButton active={tab === 'requests'} label={t('requests')} count={requests.length} onClick={() => setTab('requests')} />
         </div>
         {loading ? (
-          <div className="ms-auto flex justify-end gap-3">
+          <div className="ms-auto hidden justify-end gap-3 lg:flex">
             <span className="h-8 w-24 animate-pulse rounded-lg bg-[#f2f4f7]" />
             <span className="h-8 w-10 animate-pulse rounded-lg bg-[#f2f4f7]" />
             <span className="h-8 w-28 animate-pulse rounded-lg bg-[#f2f4f7]" />
           </div>
         ) : (
-          <div className="ms-auto flex items-center gap-3">
+          <div className="ms-auto hidden items-center gap-3 lg:flex">
             <SearchField value={query} onChange={setQuery} />
             <span className="h-6 w-px bg-border" aria-hidden="true" />
             <div className="relative" ref={filterRef}>
-              <button
-                type="button"
-                aria-expanded={filtersOpen}
-                aria-label={t('invFilters')}
-                onClick={() => {
-                  setDraftFilters(filters)
-                  setFiltersOpen((open) => !open)
-                }}
-                className="relative flex size-10 items-center justify-center"
-              >
+              <button type="button" aria-expanded={filtersOpen} aria-label={t('invFilters')} onClick={openFilters} className="relative flex size-10 items-center justify-center">
                 <FunnelIcon active={filtersOpen || filtersActive} />
                 {filtersActive ? <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-brand" /> : null}
               </button>
               {filtersOpen ? (
-                <FilterMenu
-                  tab={tab}
-                  draft={draftFilters}
-                  onChange={setDraftFilters}
-                  onCancel={() => setFiltersOpen(false)}
-                  onApply={() => { setFilters(draftFilters); setFiltersOpen(false) }}
-                />
+                <FilterMenu tab={tab} draft={draftFilters} onChange={setDraftFilters} onCancel={() => setFiltersOpen(false)} onApply={applyFilters} />
               ) : null}
             </div>
             <button type="button" aria-label={t('invDownload')} onClick={exportRows} className="flex size-10 items-center justify-center">
@@ -218,29 +235,69 @@ export default function PermitsPage() {
         )}
       </div>
 
-      <section className={tab === 'licenses' && !loading && visible.length ? 'flex flex-col gap-4' : 'overflow-hidden rounded-3xl border border-border bg-white'}>
-        {loading ? <LoadingTable /> : visible.length === 0 ? (
-          <EmptyPermits onCreate={() => setModalOpen(true)} />
-        ) : tab === 'licenses' ? (
-          licenseRows.map((license) => (
+      {!loading ? (
+        <div className="mb-4 flex items-center gap-2 lg:hidden">
+          <MobileSearchField value={query} onChange={setQuery} />
+          <button type="button" aria-label={t('invDownload')} onClick={exportRows} className="flex size-10 shrink-0 items-center justify-center">
+            <img src={icons.excel} alt="" width={20} height={20} />
+          </button>
+          <button type="button" aria-expanded={filtersOpen} aria-label={t('invFilters')} onClick={openFilters} className="relative flex size-10 shrink-0 items-center justify-center">
+            <FunnelIcon active={filtersOpen || filtersActive} />
+            {filtersActive ? <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-brand" /> : null}
+          </button>
+        </div>
+      ) : null}
+
+      {filtersOpen ? (
+        <FilterSheet tab={tab} draft={draftFilters} onChange={setDraftFilters} onCancel={() => setFiltersOpen(false)} onApply={applyFilters} />
+      ) : null}
+
+      {loading || visible.length === 0 ? (
+        <section className="overflow-hidden rounded-3xl border border-border bg-white">
+          {loading ? <LoadingTable /> : <EmptyPermits onCreate={() => setModalOpen(true)} />}
+        </section>
+      ) : tab === 'licenses' ? (
+        <div className="flex flex-col gap-4">
+          {licenseRows.map((license) => (
             <LicenseCard
               key={license.id}
               license={license}
               open={openLicense === license.id}
               onToggle={() => setOpenLicense((current) => (current === license.id ? null : license.id))}
               onOpenLicense={() => openLicenseDrawer('list')}
+              onOpenPermit={(row) => setDrawer({ kind: 'request', row: { ...row, permitType: row.type, requestDate: row.start } })}
             />
-          ))
-        ) : tab === 'requests' ? (
-          <RequestTable
-            rows={requestRows}
-            onOpen={(row) => setDrawer({ kind: 'request', row })}
-            onOpenLicense={(row) => setDrawer({ kind: 'license', from: 'request', row })}
-          />
-        ) : (
-          <PermitTable rows={permitRows} onOpenLicense={() => openLicenseDrawer('list')} />
-        )}
-      </section>
+          ))}
+        </div>
+      ) : tab === 'requests' ? (
+        <>
+          <section className="hidden overflow-hidden rounded-3xl border border-border bg-white lg:block">
+            <RequestTable
+              rows={requestRows}
+              onOpen={(row) => setDrawer({ kind: 'request', row })}
+              onOpenLicense={(row) => setDrawer({ kind: 'license', from: 'request', row })}
+            />
+          </section>
+          <div className="flex flex-col gap-3 lg:hidden">
+            {requestRows.map((row) => (
+              <RequestMobileCard key={row.id} row={row} onOpen={() => setDrawer({ kind: 'request', row })} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <section className="hidden overflow-hidden rounded-3xl border border-border bg-white lg:block">
+            <PermitTable rows={permitRows} onOpenLicense={() => openLicenseDrawer('list')} />
+          </section>
+          <div className="flex flex-col gap-3 lg:hidden">
+            {permitRows.map((row) => (
+              <PermitMobileCard key={row.id} row={row} onOpen={() => openLicenseDrawer('list')} />
+            ))}
+          </div>
+        </>
+      )}
+
+      <p className="mt-8 text-center text-xs text-text-placeholder lg:hidden">{t('rightsReserved')}</p>
 
       <DetailsDrawer
         drawer={drawer}
@@ -296,7 +353,28 @@ function SearchField({ value, onChange }) {
   )
 }
 
-function LicenseCard({ license, open, onToggle, onOpenLicense }) {
+function MobileSearchField({ value, onChange }) {
+  const { t } = useApp()
+  return (
+    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-white px-3 shadow-xs">
+      <img src={icons.search} alt="" width={20} height={20} />
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={t('licSearchPlaceholder')}
+        aria-label={t('licSearchPlaceholder')}
+        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-text-primary outline-none placeholder:font-normal placeholder:text-text-placeholder"
+      />
+      {value ? (
+        <button type="button" aria-label={t('invClearSearch')} onClick={() => onChange('')}>
+          <img src={icons.xClose} alt="" width={20} height={20} />
+        </button>
+      ) : null}
+    </label>
+  )
+}
+
+function LicenseCard({ license, open, onToggle, onOpenLicense, onOpenPermit }) {
   const { t, language } = useApp()
   const headers = [t('reqRequestNumber'), t('perPermitNumber'), t('reqPermitType'), t('perStartDate'), t('perExpiryDate'), t('invStatus'), 'Ports', '']
   const amount = language === 'ar' ? `${license.amount.replace(' SAR', '')} ر.س` : license.amount
@@ -305,7 +383,7 @@ function LicenseCard({ license, open, onToggle, onOpenLicense }) {
     : `Start date: ${license.startLabel} • Expiry date: ${license.expiryLabel}`
   return (
     <article className="rounded-2xl border border-border bg-white">
-      <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="hidden flex-col gap-3 px-5 py-4 lg:flex lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-semibold text-text-primary">{license.code} {showText(t, language, license.name)}</h2>
@@ -319,33 +397,132 @@ function LicenseCard({ license, open, onToggle, onOpenLicense }) {
           <img src={icons.chevronDown} alt="" width={20} height={20} className={open ? 'rotate-180' : ''} />
         </button>
       </div>
-      {open ? (
-        <div className="overflow-x-auto border-t border-border">
-          <table className="w-full min-w-[900px] border-collapse text-start">
-            <thead>
-              <tr className="text-xs font-semibold text-text-tertiary">
-                {headers.map((header) => (
-                  <th key={header || 'info'} className="px-5 py-3 text-start font-semibold">{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {license.permits.map((row) => (
-                <tr key={row.id} className="h-14 text-sm text-text-tertiary">
-                  <td className="border-t border-border px-5 font-medium text-text-primary">{row.number}</td>
-                  <td className="border-t border-border px-5">{row.permitNumber}</td>
-                  <td className="border-t border-border px-5">{row.type}</td>
-                  <td className="border-t border-border px-5">{displayDate(row.start)}</td>
-                  <td className="border-t border-border px-5">{displayDate(row.expiry)}</td>
-                  <td className="border-t border-border px-5"><span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{showStatus(t, language, row.status)}</span></td>
-                  <td className="border-t border-border px-5">{showText(t, language, row.ports)}</td>
-                  <td className="border-t border-border px-5"><InfoButton label={t('reqViewNamed', { name: license.code })} onClick={onOpenLicense} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+      <div className="p-4 lg:hidden">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm text-text-tertiary">{license.code}</p>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(license.status)}`}>{showStatus(t, language, license.status)}</span>
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-text-secondary">{amount}</span>
+          </div>
         </div>
+        <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{showText(t, language, license.name)}</h2>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium text-text-primary">{displayDate(license.start)}</p>
+            <p className="mt-0.5 text-xs text-text-tertiary">{t('perStartDate')}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-text-primary">{displayDate(license.expiry)}</p>
+            <p className="mt-0.5 text-xs text-text-tertiary">{t('perExpiryDate')}</p>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between border-t border-border px-4 py-3 text-sm font-semibold text-text-secondary lg:hidden">
+        {t('perDetails')}
+        <img src={icons.chevronDown} alt="" width={20} height={20} className={open ? 'rotate-180' : ''} />
+      </button>
+
+      {open ? (
+        <>
+          <div className="hidden overflow-x-auto border-t border-border lg:block">
+            <table className="w-full min-w-[900px] border-collapse text-start">
+              <thead>
+                <tr className="text-xs font-semibold text-text-tertiary">
+                  {headers.map((header) => (
+                    <th key={header || 'info'} className="px-5 py-3 text-start font-semibold">{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {license.permits.map((row) => (
+                  <tr key={row.id} className="h-14 text-sm text-text-tertiary">
+                    <td className="border-t border-border px-5 font-medium text-text-primary">{row.number}</td>
+                    <td className="border-t border-border px-5">{row.permitNumber}</td>
+                    <td className="border-t border-border px-5">{row.type}</td>
+                    <td className="border-t border-border px-5">{displayDate(row.start)}</td>
+                    <td className="border-t border-border px-5">{displayDate(row.expiry)}</td>
+                    <td className="border-t border-border px-5"><span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{showStatus(t, language, row.status)}</span></td>
+                    <td className="border-t border-border px-5">{showText(t, language, row.ports)}</td>
+                    <td className="border-t border-border px-5"><InfoButton label={t('reqViewNamed', { name: license.code })} onClick={onOpenLicense} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-border bg-[#f9fafb] p-4 lg:hidden">
+            {license.permits.map((row) => (
+              <div key={row.id} className="rounded-xl border border-border bg-white p-3">
+                <p className="text-xs text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+                <div className="mt-1 flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-text-primary">{row.permitNumber} - {showText(t, language, row.type)}</h3>
+                  <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{showStatus(t, language, row.status)}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{displayDate(row.start)}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">{t('perStartDate')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">{displayDate(row.expiry)}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">{t('perExpiryDate')}</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <InfoButton label={t('reqViewNamed', { name: row.permitNumber })} onClick={() => (onOpenPermit ? onOpenPermit(row) : onOpenLicense())} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       ) : null}
+    </article>
+  )
+}
+
+function PermitMobileCard({ row, onOpen }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-text-primary">{row.number}</p>
+        <InfoButton label={t('reqViewPermit', { number: row.number })} onClick={onOpen} />
+      </div>
+      <h2 className="mt-2 text-md font-semibold text-text-primary">{showText(t, language, row.type)}</h2>
+      <p className="mt-1 text-sm text-text-tertiary">{row.company}</p>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.start)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('perStartDate')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.expiry)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('perExpiryDate')}</p>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function RequestMobileCard({ row, onOpen }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{showStatus(t, language, row.status)}</span>
+      </div>
+      <h2 className="mt-2 text-md font-semibold text-text-primary">{showText(t, language, row.permitType)}</h2>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.date)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqRequestDate')}</p>
+        </div>
+        <div className="flex items-end justify-end">
+          <InfoButton label={t('reqViewRequest', { number: row.number })} onClick={onOpen} />
+        </div>
+      </div>
     </article>
   )
 }
@@ -469,7 +646,7 @@ function DetailsDrawer({ drawer, licenseStatus, onClose, onBack, onOpenLicense, 
   return (
     <div className="fixed inset-0 z-40">
       <button type="button" aria-label={t('close')} className="absolute inset-0 bg-[#0a0d12]/70" onClick={onClose} />
-      <aside className="absolute inset-y-0 end-0 flex w-full max-w-[440px] flex-col bg-white shadow-lg">
+      <aside className="absolute inset-x-0 bottom-0 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-lg lg:inset-y-0 lg:end-0 lg:start-auto lg:max-h-none lg:max-w-[440px] lg:rounded-none">
         {drawer.kind === 'request' ? <RequestDetail row={drawer.row} onClose={onClose} onOpenLicense={onOpenLicense} /> : (
           <LicenseDetail fromRequest={fromRequest} status={licenseStatus} onClose={onClose} onBack={onBack} onRenew={onRenew} />
         )}
@@ -490,7 +667,12 @@ function LicenseDetail({ fromRequest, status, onClose, onBack, onRenew }) {
         ) : (
           <FeaturedIcon type="license" />
         )}
-        <DrawerClose onClose={onClose} />
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label={t('moreActions')} className="flex size-9 items-center justify-center rounded-lg hover:bg-bg-active">
+            <DotsIcon />
+          </button>
+          <DrawerClose onClose={onClose} />
+        </div>
       </div>
       <div className="px-6 pb-4 pt-4">
         <p className="text-sm text-text-tertiary">{license.code}</p>
@@ -513,8 +695,8 @@ function LicenseDetail({ fromRequest, status, onClose, onBack, onRenew }) {
         <AttachmentSection files={[{ name: 'File title here.xls', kind: 'XLS' }]} />
       </div>
       {fromRequest || status !== 'Expired' ? null : (
-        <div className="flex justify-end border-t border-border px-6 py-4">
-          <Button onClick={onRenew}>{t('licRenewBtn')}</Button>
+        <div className="border-t border-border px-6 py-4 lg:flex lg:justify-end">
+          <Button className="h-11 w-full lg:h-10 lg:w-auto" onClick={onRenew}>{t('licRenewBtn')}</Button>
         </div>
       )}
     </>
@@ -556,15 +738,12 @@ function RequestDetail({ row, onClose, onOpenLicense }) {
   )
 }
 
-function FilterMenu({ tab, draft, onChange, onCancel, onApply }) {
+function PermitFilterFields({ tab, draft, onChange }) {
   const { t, language } = useApp()
   const typeLabel = language === 'ar' && tab === 'permits' ? 'Permit Type' : t('reqPermitType')
   return (
-    <div className="absolute end-0 top-12 z-30 w-[300px] rounded-xl border border-border bg-white p-4 shadow-lg">
-      <h2 className="text-sm font-semibold text-text-primary">{t('invFilters')}</h2>
-      <div className="mt-4">
-        <PeriodField start={draft.start} end={draft.end} onChange={(range) => onChange({ ...draft, ...range })} />
-      </div>
+    <>
+      <PeriodField start={draft.start} end={draft.end} onChange={(range) => onChange({ ...draft, ...range })} />
       <label className="mt-4 flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
         {typeLabel}
         <span className="relative">
@@ -575,9 +754,44 @@ function FilterMenu({ tab, draft, onChange, onCancel, onApply }) {
           <img src={icons.chevronDown} alt="" width={20} height={20} className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2" />
         </span>
       </label>
+    </>
+  )
+}
+
+function FilterMenu({ tab, draft, onChange, onCancel, onApply }) {
+  const { t } = useApp()
+  return (
+    <div className="absolute end-0 top-12 z-30 hidden w-[300px] rounded-xl border border-border bg-white p-4 shadow-lg lg:block">
+      <h2 className="text-sm font-semibold text-text-primary">{t('invFilters')}</h2>
+      <div className="mt-4">
+        <PermitFilterFields tab={tab} draft={draft} onChange={onChange} />
+      </div>
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" className="h-9" onClick={onCancel}>{t('cancel')}</Button>
         <Button className="h-9" onClick={onApply}>{t('invApply')}</Button>
+      </div>
+    </div>
+  )
+}
+
+function FilterSheet({ tab, draft, onChange, onCancel, onApply }) {
+  const { t } = useApp()
+  return (
+    <div className="fixed inset-0 z-40 lg:hidden">
+      <button type="button" aria-label={t('close')} className="absolute inset-0 bg-[#0a0d12]/70" onClick={onCancel} />
+      <div data-filter-sheet className="absolute inset-x-0 bottom-0 flex max-h-[92vh] flex-col rounded-t-2xl bg-white shadow-lg">
+        <div className="flex items-center justify-between px-5 pb-2 pt-5">
+          <h2 className="text-lg font-semibold text-text-primary">{t('filterBy')}</h2>
+          <button type="button" aria-label={t('close')} onClick={onCancel} className="flex size-9 items-center justify-center rounded-lg hover:bg-bg-active">
+            <img src={icons.xClose} alt="" width={20} height={20} />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">
+          <PermitFilterFields tab={tab} draft={draft} onChange={onChange} />
+        </div>
+        <div className="border-t border-border px-5 py-4">
+          <Button className="h-11 w-full" onClick={onApply}>{t('applyFilter')}</Button>
+        </div>
       </div>
     </div>
   )
@@ -754,6 +968,14 @@ function ArrowIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="rtl:scale-x-[-1]">
       <path d="M3.333 8h9.334m0 0L8.667 4M12.667 8 8.667 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DotsIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 10.833a.833.833 0 1 0 0-1.666.833.833 0 0 0 0 1.666ZM10 5.833a.833.833 0 1 0 0-1.666.833.833 0 0 0 0 1.666ZM10 15.833a.833.833 0 1 0 0-1.666.833.833 0 0 0 0 1.666Z" fill="#535862" stroke="#535862" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

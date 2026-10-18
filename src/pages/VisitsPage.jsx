@@ -3,7 +3,6 @@ import { icons } from '../assets'
 import Button from '../components/ui/Button'
 import DateField from '../components/ui/DateField'
 import { PORT_OPTIONS, VISIT_RANGES, VISIT_TODAY, VISIT_TYPES, VISITS } from '../constants/visits'
-import { useClickOutside } from '../hooks/useClickOutside'
 import { useApp } from '../hooks/useApp'
 
 const RANGE_KEYS = { week: 'visThisWeek', days30: 'visNext30', days90: 'visNext90' }
@@ -97,7 +96,23 @@ export default function VisitsPage() {
   const [openAttachments, setOpenAttachments] = useState(null)
   const filterRef = useRef(null)
 
-  useClickOutside(filterRef, () => setFiltersOpen(false), filtersOpen)
+  useEffect(() => {
+    if (!filtersOpen) return undefined
+    const onPointer = (event) => {
+      if (!window.matchMedia('(min-width: 1024px)').matches) return
+      if (!filterRef.current || filterRef.current.contains(event.target)) return
+      setFiltersOpen(false)
+    }
+    const onKey = (event) => {
+      if (event.key === 'Escape') setFiltersOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [filtersOpen])
 
   useEffect(() => {
     if (!openAttachments) return undefined
@@ -137,10 +152,22 @@ export default function VisitsPage() {
     URL.revokeObjectURL(url)
   }
 
+  function openFilters() {
+    setDraftFilters(filters)
+    setFiltersOpen((open) => !open)
+  }
+
+  function applyFilters() {
+    setFilters(draftFilters)
+    setFiltersOpen(false)
+  }
+
   return (
     <div className="px-4 pb-10 pt-4 md:px-8">
+      <h1 className="mb-4 text-display-xs font-semibold text-text-primary lg:hidden">{t('visits')}</h1>
+
       <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="hidden flex-wrap items-center gap-2 lg:flex">
           {VISIT_RANGES.map((item) => (
             <button
               key={item.id}
@@ -152,33 +179,16 @@ export default function VisitsPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="hidden flex-wrap items-center gap-3 lg:flex">
           <SearchField value={query} onChange={setQuery} />
           <span className="h-6 w-px bg-border" aria-hidden="true" />
           <div className="relative" ref={filterRef}>
-            <button
-              type="button"
-              aria-expanded={filtersOpen}
-              aria-label={t('invFilters')}
-              onClick={() => {
-                setDraftFilters(filters)
-                setFiltersOpen((open) => !open)
-              }}
-              className="relative flex size-10 items-center justify-center"
-            >
+            <button type="button" aria-expanded={filtersOpen} aria-label={t('invFilters')} onClick={openFilters} className="relative flex size-10 items-center justify-center">
               <FunnelIcon active={filtersOpen || filtersActive} />
               {filtersActive ? <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-brand" /> : null}
             </button>
             {filtersOpen ? (
-              <FilterMenu
-                draft={draftFilters}
-                onChange={setDraftFilters}
-                onCancel={() => setFiltersOpen(false)}
-                onApply={() => {
-                  setFilters(draftFilters)
-                  setFiltersOpen(false)
-                }}
-              />
+              <FilterMenu draft={draftFilters} onChange={setDraftFilters} onCancel={() => setFiltersOpen(false)} onApply={applyFilters} />
             ) : null}
           </div>
           <button type="button" aria-label={t('invDownload')} onClick={exportRows} className="flex size-10 items-center justify-center">
@@ -186,6 +196,21 @@ export default function VisitsPage() {
           </button>
         </div>
       </div>
+
+      <div className="mb-4 flex items-center gap-2 lg:hidden">
+        <MobileSearchField value={query} onChange={setQuery} />
+        <button type="button" aria-label={t('invDownload')} onClick={exportRows} className="flex size-10 shrink-0 items-center justify-center">
+          <img src={icons.excel} alt="" width={20} height={20} />
+        </button>
+        <button type="button" aria-expanded={filtersOpen} aria-label={t('invFilters')} onClick={openFilters} className="relative flex size-10 shrink-0 items-center justify-center">
+          <FunnelIcon active={filtersOpen || filtersActive} />
+          {filtersActive ? <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-brand" /> : null}
+        </button>
+      </div>
+
+      {filtersOpen ? (
+        <FilterSheet draft={draftFilters} onChange={setDraftFilters} onCancel={() => setFiltersOpen(false)} onApply={applyFilters} />
+      ) : null}
 
       {filtersActive ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -219,6 +244,8 @@ export default function VisitsPage() {
           ))}
         </div>
       )}
+
+      <p className="mt-8 text-center text-xs text-text-placeholder lg:hidden">{t('rightsReserved')}</p>
     </div>
   )
 }
@@ -229,10 +256,10 @@ function VisitCard({ visit, attachmentsOpen, onToggleAttachments }) {
   const extra = visit.files.length - preview.length
 
   return (
-    <article className={`flex min-h-[220px] flex-col rounded-2xl border border-border bg-white p-5 shadow-xs ${attachmentsOpen ? 'relative z-20' : ''}`}>
+    <article className={`flex min-h-[220px] flex-col rounded-2xl border border-border bg-white p-4 shadow-xs sm:p-5 ${attachmentsOpen ? 'relative z-20' : ''}`}>
       <div className="flex items-start justify-between gap-3 text-sm text-text-placeholder">
         <span>{t('visId', { code: visit.code })}</span>
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 text-end">
           <img src={icons.calendar} alt="" width={16} height={16} />
           {t('visVisitDate')}{' '}
           <span className={visit.urgency === 'today' ? 'font-medium text-[#7616e8]' : visit.urgency === 'due' ? 'font-medium text-[#d92d20]' : 'text-text-secondary'}>
@@ -241,29 +268,36 @@ function VisitCard({ visit, attachmentsOpen, onToggleAttachments }) {
           </span>
         </span>
       </div>
-      <h2 className="mt-6 text-start text-lg font-semibold leading-7 text-text-primary">{titleLabel(t, visit.title)}</h2>
+      <h2 className="mt-4 text-start text-lg font-semibold leading-7 text-text-primary sm:mt-6">{titleLabel(t, visit.title)}</h2>
       <p className="mt-3 text-start text-sm text-text-placeholder">
         {t('visTypeLabel')} <span className="font-semibold text-text-primary">{typeLabel(t, visit.type)}</span>
       </p>
       <p className="mt-0.5 text-start text-sm text-text-placeholder">
         {t('visPortLabel')} <span className="font-semibold text-text-primary">{portLabel(t, visit.port)}</span>
       </p>
-      <div className="relative mt-auto flex items-center gap-2 pt-6" dir="ltr" data-attachments>
-        {preview.map((file, index) => (
-          <FileChip key={`${file.name}-${index}`} file={file} />
-        ))}
-        {extra > 0 ? (
-          <button type="button" onClick={onToggleAttachments} className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-brand bg-white px-2.5 text-sm font-semibold text-brand">
-            +{extra}
-          </button>
-        ) : null}
+      <div className="relative mt-auto flex flex-col gap-2 pt-5 lg:flex-row lg:flex-wrap lg:items-center" dir="ltr" data-attachments>
+        <div className="flex flex-col gap-2 lg:hidden">
+          {visit.files.map((file, index) => (
+            <FileChip key={`${file.name}-${index}`} file={file} full />
+          ))}
+        </div>
+        <div className="hidden items-center gap-2 lg:flex">
+          {preview.map((file, index) => (
+            <FileChip key={`${file.name}-${index}`} file={file} />
+          ))}
+          {extra > 0 ? (
+            <button type="button" onClick={onToggleAttachments} className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-brand bg-white px-2.5 text-sm font-semibold text-brand">
+              +{extra}
+            </button>
+          ) : null}
+        </div>
         {attachmentsOpen ? <AttachmentsMenu files={visit.files} /> : null}
       </div>
     </article>
   )
 }
 
-function FileChip({ file }) {
+function FileChip({ file, full = false }) {
   const { t } = useApp()
   return (
     <button
@@ -271,10 +305,10 @@ function FileChip({ file }) {
       dir="ltr"
       aria-label={t('visDownloadNamed', { name: file.name })}
       onClick={() => downloadFile(file.name)}
-      className="inline-flex h-9 min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-[#e9eaeb] bg-[#f9fafb] px-2.5"
+      className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#e9eaeb] bg-[#f9fafb] px-2.5 ${full ? 'w-full' : 'min-w-0'}`}
     >
       <FileMark kind={file.kind} />
-      <span className="truncate text-sm font-medium text-text-secondary">{shortFileName(file.name)}</span>
+      <span className="min-w-0 flex-1 truncate text-start text-sm font-medium text-text-secondary">{full ? file.name : shortFileName(file.name)}</span>
       <DownloadIcon />
     </button>
   )
@@ -332,6 +366,27 @@ function SearchField({ value, onChange }) {
   )
 }
 
+function MobileSearchField({ value, onChange }) {
+  const { t } = useApp()
+  return (
+    <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-white px-3 shadow-xs">
+      <img src={icons.search} alt="" width={20} height={20} />
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={t('licSearchPlaceholder')}
+        aria-label={t('licSearchPlaceholder')}
+        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-text-primary outline-none placeholder:font-normal placeholder:text-text-placeholder"
+      />
+      {value ? (
+        <button type="button" aria-label={t('invClearSearch')} onClick={() => onChange('')}>
+          <img src={icons.xClose} alt="" width={20} height={20} />
+        </button>
+      ) : null}
+    </label>
+  )
+}
+
 function FilterChip({ label, onRemove }) {
   const { t } = useApp()
   return (
@@ -344,28 +399,25 @@ function FilterChip({ label, onRemove }) {
   )
 }
 
-function FilterMenu({ draft, onChange, onCancel, onApply }) {
+function VisitFilterFields({ draft, onChange }) {
   const { t } = useApp()
   return (
-    <div className="absolute end-0 top-12 z-30 w-[300px] rounded-xl border border-border bg-white p-4 shadow-lg">
-      <h2 className="text-sm font-semibold text-text-primary">{t('invFilters')}</h2>
-      <div className="mt-4 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold text-text-secondary">{t('visPeriod')}</span>
-          <DateField format="long" value={draft.start} max={draft.end} onChange={(start) => onChange({ ...draft, start })} />
-          <DateField format="long" value={draft.end} min={draft.start} onChange={(end) => onChange({ ...draft, end })} />
-        </div>
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
-          {t('visPortLabel')}
-          <span className="relative">
-            <select value={draft.port} onChange={(event) => onChange({ ...draft, port: event.target.value })} className="h-10 w-full appearance-none rounded-lg border border-border bg-white px-3 pe-9 text-sm font-semibold text-text-primary shadow-xs outline-none">
-              <option value="">{t('visSelectPort')}</option>
-              {PORT_OPTIONS.map((port) => <option key={port} value={port}>{portLabel(t, port)}</option>)}
-            </select>
-            <img src={icons.chevronDown} alt="" width={20} height={20} className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2" />
-          </span>
-        </label>
+    <>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold text-text-secondary">{t('visPeriod')}</span>
+        <DateField format="long" value={draft.start} max={draft.end} onChange={(start) => onChange({ ...draft, start })} />
+        <DateField format="long" value={draft.end} min={draft.start} onChange={(end) => onChange({ ...draft, end })} />
       </div>
+      <label className="mt-4 flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
+        {t('visPortLabel')}
+        <span className="relative">
+          <select value={draft.port} onChange={(event) => onChange({ ...draft, port: event.target.value })} className="h-10 w-full appearance-none rounded-lg border border-border bg-white px-3 pe-9 text-sm font-semibold text-text-primary shadow-xs outline-none">
+            <option value="">{t('visSelectPort')}</option>
+            {PORT_OPTIONS.map((port) => <option key={port} value={port}>{portLabel(t, port)}</option>)}
+          </select>
+          <img src={icons.chevronDown} alt="" width={20} height={20} className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2" />
+        </span>
+      </label>
       <fieldset className="mt-4">
         <legend className="text-sm font-medium text-text-secondary">{t('visVisitType')}</legend>
         {VISIT_TYPES.map((type) => (
@@ -380,9 +432,44 @@ function FilterMenu({ draft, onChange, onCancel, onApply }) {
           </label>
         ))}
       </fieldset>
+    </>
+  )
+}
+
+function FilterMenu({ draft, onChange, onCancel, onApply }) {
+  const { t } = useApp()
+  return (
+    <div className="absolute end-0 top-12 z-30 hidden w-[300px] rounded-xl border border-border bg-white p-4 shadow-lg lg:block">
+      <h2 className="text-sm font-semibold text-text-primary">{t('invFilters')}</h2>
+      <div className="mt-4">
+        <VisitFilterFields draft={draft} onChange={onChange} />
+      </div>
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" className="h-9" onClick={onCancel}>{t('cancel')}</Button>
         <Button className="h-9" onClick={onApply}>{t('invApply')}</Button>
+      </div>
+    </div>
+  )
+}
+
+function FilterSheet({ draft, onChange, onCancel, onApply }) {
+  const { t } = useApp()
+  return (
+    <div className="fixed inset-0 z-40 lg:hidden">
+      <button type="button" aria-label={t('close')} className="absolute inset-0 bg-[#0a0d12]/70" onClick={onCancel} />
+      <div data-filter-sheet className="absolute inset-x-0 bottom-0 flex max-h-[92vh] flex-col rounded-t-2xl bg-white shadow-lg">
+        <div className="flex items-center justify-between px-5 pb-2 pt-5">
+          <h2 className="text-lg font-semibold text-text-primary">{t('filterBy')}</h2>
+          <button type="button" aria-label={t('close')} onClick={onCancel} className="flex size-9 items-center justify-center rounded-lg hover:bg-bg-active">
+            <img src={icons.xClose} alt="" width={20} height={20} />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 py-4">
+          <VisitFilterFields draft={draft} onChange={onChange} />
+        </div>
+        <div className="border-t border-border px-5 py-4">
+          <Button className="h-11 w-full" onClick={onApply}>{t('applyFilter')}</Button>
+        </div>
       </div>
     </div>
   )

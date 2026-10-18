@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import { icons } from '../assets'
+import { icons, images } from '../assets'
 import Dialog from '../components/profile/Dialog'
 import Button from '../components/ui/Button'
 import { INITIAL_DETAILS } from '../constants/profile'
@@ -25,8 +25,18 @@ export default function ProfileLayout() {
   return (
     <div className="min-h-screen bg-bg-neutral">
       <header className="sticky top-0 z-20 border-b border-border bg-bg-neutral">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3 px-4 py-6 sm:px-8 lg:px-16">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-6 lg:px-16">
+          <div className="flex min-w-0 items-center gap-3 lg:hidden">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              aria-label={t('crBack')}
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-text-secondary"
+            >
+              <img src={icons.chevronLeft} alt="" width={20} height={20} className="rtl:rotate-180" />
+            </button>
+          </div>
+          <div className="hidden min-w-0 items-center gap-3 lg:flex">
             <button
               type="button"
               onClick={() => navigate('/')}
@@ -37,9 +47,25 @@ export default function ProfileLayout() {
             </button>
             <h1 className="truncate text-lg font-semibold text-text-primary">{t('companyProfile')}</h1>
           </div>
+
+          <div className="flex flex-1 justify-center lg:hidden">
+            <div className="relative h-9 w-8 overflow-hidden" aria-label="Mawani">
+              <img src={images.logo} alt="" className="absolute top-[-0.12%] left-[-190.41%] h-full w-[290.42%] max-w-none" />
+            </div>
+          </div>
+
           <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              className="text-sm font-semibold text-brand lg:hidden"
+              disabled={validating}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {t('save')}
+            </button>
             <Button
               variant="secondary"
+              className="hidden lg:inline-flex"
               onClick={() => {
                 if (!dirty) return
                 setDiscardOpen(true)
@@ -47,15 +73,35 @@ export default function ProfileLayout() {
             >
               {t('crDiscard')}
             </Button>
-            <Button onClick={() => setConfirmOpen(true)} disabled={validating}>
+            <Button className="hidden lg:inline-flex" onClick={() => setConfirmOpen(true)} disabled={validating}>
               {t('save')}
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-8 sm:px-8 lg:flex-row lg:px-16">
-        <nav aria-label={t('companyProfile')} className="flex w-full shrink-0 gap-1 lg:w-[172px] lg:flex-col">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8 lg:flex-row lg:px-16">
+        <div className="lg:hidden">
+          <h1 className="text-display-xs font-semibold text-text-primary">{t('companyProfile')}</h1>
+          <nav aria-label={t('companyProfile')} className="mt-4 flex gap-4 border-b border-border">
+            {tabs.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                end={tab.end}
+                className={({ isActive }) =>
+                  `-mb-px border-b-2 pb-3 text-sm font-semibold ${
+                    isActive ? 'border-brand text-brand' : 'border-transparent text-text-placeholder'
+                  }`
+                }
+              >
+                {tab.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+
+        <nav aria-label={t('companyProfile')} className="hidden w-full shrink-0 gap-1 lg:flex lg:w-[172px] lg:flex-col">
           {tabs.map((tab) => (
             <NavLink
               key={tab.to}
@@ -75,6 +121,8 @@ export default function ProfileLayout() {
           <Outlet context={{ details, setDetails, setValidating }} />
         </div>
       </div>
+
+      <p className="px-4 pb-6 text-center text-xs text-text-placeholder lg:hidden">{t('rightsReserved')}</p>
 
       <Dialog
         open={confirmOpen}

@@ -62,9 +62,9 @@ export default function HomePage({ empty = false }) {
                 <h2 className="text-lg font-semibold text-text-primary">{t('recentActivities')}</h2>
                 <p className="text-sm text-text-tertiary">{t('latestUpdates')}</p>
               </div>
-              <Button variant="secondary" onClick={() => navigate('/activities')}>
-                <Icon name="grid" size={20} />
-                {t('allActivities')}
+              <Button variant="secondary" className="shrink-0 px-2.5 sm:px-3.5" onClick={() => navigate('/activities')}>
+                <Icon name="grid" size={20} className="hidden sm:inline" />
+                <span className="whitespace-nowrap text-xs sm:text-sm">{t('allActivities')}</span>
               </Button>
             </div>
             <div className="relative max-h-[416px] overflow-hidden">
@@ -93,6 +93,8 @@ export default function HomePage({ empty = false }) {
           </Card>
         </div>
       )}
+
+      <p className="mt-2 text-center text-xs text-text-placeholder lg:hidden">{t('rightsReserved')}</p>
     </PageContainer>
   )
 }

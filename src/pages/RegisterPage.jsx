@@ -40,7 +40,6 @@ export default function RegisterPage() {
   const [accountType, setAccountType] = useState('companies')
   const [profile, setProfile] = useState('local')
   const [identity, setIdentity] = useState('')
-  const [websiteCode, setWebsiteCode] = useState('')
   const [companyType, setCompanyType] = useState(COMPANY_TYPES[0])
   const [nationality, setNationality] = useState('')
   const [documentType, setDocumentType] = useState('')
@@ -95,8 +94,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef1f4] p-3 sm:p-5">
-      <div className="relative mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1440px] flex-col overflow-hidden rounded-[28px] bg-white sm:min-h-[calc(100vh-2.5rem)]">
+    <div className="min-h-screen bg-white lg:bg-[#eef1f4] lg:p-3 xl:p-5">
+      <div className="relative mx-auto flex min-h-screen max-w-[1440px] flex-col overflow-hidden bg-white lg:min-h-[calc(100vh-1.5rem)] lg:rounded-[28px] xl:min-h-[calc(100vh-2.5rem)]">
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -107,11 +106,24 @@ export default function RegisterPage() {
           }}
         />
 
-        <div
-          className="relative mx-auto flex w-full flex-1 flex-col items-center py-10"
-          style={{ maxWidth: 720, paddingLeft: 40, paddingRight: 40 }}
-        >
-          <img src={images.logo} alt="Mawani" className="h-12 w-auto max-w-[200px] object-contain" />
+        <div className="relative mx-auto flex w-full max-w-[720px] flex-1 flex-col items-center px-5 py-6 sm:px-8 sm:py-10 lg:px-10">
+          <div className="relative flex w-full items-center justify-center">
+            <Link
+              to="/login"
+              aria-label={t('backToSignIn')}
+              className="absolute start-0 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg text-text-secondary hover:bg-bg-active"
+            >
+              <BackArrow />
+            </Link>
+            <img src={images.logo} alt="Mawani" className="h-10 w-auto max-w-[180px] object-contain sm:h-12 sm:max-w-[200px]" />
+            <button
+              type="button"
+              className="absolute end-0 top-1/2 -translate-y-1/2 text-xs font-semibold text-text-tertiary lg:hidden"
+              onClick={toggleLanguage}
+            >
+              {language === 'ar' ? 'English' : 'العربية'}
+            </button>
+          </div>
           <h1 className="mt-6 text-center text-display-sm font-semibold tracking-[-0.02em] text-text-primary">{t('signUpTitle')}</h1>
           <p className="mt-2 text-center text-md text-text-tertiary">{t('signUpBody')}</p>
 
@@ -130,12 +142,12 @@ export default function RegisterPage() {
                     else if (item.id === 'employee') setProfile('label1')
                     else if (profile === 'visits' || profile === 'label1' || profile === 'label2' || profile === 'label3') setProfile('local')
                   }}
-                  className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${
+                  className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-1 text-xs font-semibold sm:gap-2 sm:text-sm ${
                     active ? 'bg-white text-brand shadow-xs' : 'text-text-tertiary'
                   }`}
                 >
                   <TypeIcon name={item.icon} />
-                  {t(item.label)}
+                  <span className="truncate">{t(item.label)}</span>
                 </button>
               )
             })}
@@ -199,8 +211,6 @@ export default function RegisterPage() {
                   label={t('regDocumentNumber')}
                   value={identity}
                   onChange={setIdentity}
-                  code={websiteCode}
-                  onCode={setWebsiteCode}
                   placeholder={t('regDocNumberPlaceholder')}
                   error={errors.identity}
                   t={t}
@@ -233,8 +243,6 @@ export default function RegisterPage() {
                     label={t('regDocumentNumber')}
                     value={identity}
                     onChange={setIdentity}
-                    code={websiteCode}
-                    onCode={setWebsiteCode}
                     placeholder={t('regDocNumberPlaceholder')}
                     error={errors.identity}
                     t={t}
@@ -247,8 +255,6 @@ export default function RegisterPage() {
                   label={t('regNationalId')}
                   value={identity}
                   onChange={setIdentity}
-                  code={websiteCode}
-                  onCode={setWebsiteCode}
                   placeholder={t('regIdPlaceholder')}
                   error={errors.identity}
                   t={t}
@@ -306,11 +312,11 @@ export default function RegisterPage() {
               </Field>
 
               <Field label={t('regPhone')}>
-                <span className="flex h-11 items-center rtl:flex-row-reverse">
+                <span className="flex h-11 items-center">
                   <span dir="ltr" className="flex shrink-0 items-center gap-1.5">
-                    <Chevron className="text-text-placeholder" />
-                    <span className="text-sm font-medium text-text-primary">+966</span>
                     <img src={images.flagSa} alt="" width={20} height={14} className="h-3.5 w-5 rounded-sm object-cover" />
+                    <span className="text-sm font-medium text-text-primary">+966</span>
+                    <Chevron className="text-text-placeholder" />
                   </span>
                   <span className="mx-3 h-5 w-px shrink-0 bg-border" aria-hidden="true" />
                   <input
@@ -321,7 +327,7 @@ export default function RegisterPage() {
                     autoComplete="tel-national"
                     placeholder={t('regPhonePlaceholder')}
                     aria-label={t('regPhone')}
-                    className="h-11 min-w-0 flex-1 bg-transparent px-3 text-start text-sm text-text-primary outline-none placeholder:text-text-placeholder rtl:text-end"
+                    className="h-11 min-w-0 flex-1 bg-transparent text-start text-sm text-text-primary outline-none placeholder:text-text-placeholder"
                   />
                 </span>
               </Field>
@@ -379,7 +385,7 @@ export default function RegisterPage() {
           </form>
 
           <div className="my-6 h-px w-full bg-border" />
-          <button type="button" className="inline-flex items-center gap-2 text-sm font-semibold text-brand" onClick={openAccount} disabled={submitting}>
+          <button type="button" className="inline-flex items-center gap-2 text-center text-sm font-semibold text-brand" onClick={openAccount} disabled={submitting}>
             {t('nafathSignIn')}
             <InfoMark />
           </button>
@@ -391,9 +397,9 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <div className="relative flex items-center justify-between px-6 pb-6 sm:px-8">
+        <div className="relative flex items-center justify-center gap-4 px-5 pb-6 sm:px-8 lg:justify-between">
           <p className="text-xs text-text-placeholder">{t('rightsReserved')}</p>
-          <button type="button" className="text-xs font-semibold text-text-tertiary" onClick={toggleLanguage}>
+          <button type="button" className="hidden text-xs font-semibold text-text-tertiary lg:inline" onClick={toggleLanguage}>
             {language === 'ar' ? 'English' : 'العربية'}
           </button>
         </div>
@@ -425,10 +431,10 @@ function Required() {
   return <span className="text-[#b42318]"> *</span>
 }
 
-function DocumentRow({ label, value, onChange, code, onCode, placeholder, error }) {
+function DocumentRow({ label, value, onChange, placeholder, error, t }) {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="text-sm font-semibold text-text-primary">
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-text-secondary">
         {label}
         <Required />
       </span>
@@ -437,19 +443,27 @@ function DocumentRow({ label, value, onChange, code, onCode, placeholder, error 
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className={`h-12 min-w-0 flex-1 rounded-s-lg border border-e-0 bg-white px-4 text-sm text-text-primary outline-none placeholder:text-[#98a2b3] focus:border-[#717bbc] ${
-            error ? 'border-red-400' : 'border-[#eaecf0]'
+          className={`h-11 min-w-0 flex-1 rounded-s-lg border border-e-0 bg-white px-3.5 text-sm text-text-primary outline-none placeholder:text-text-placeholder focus:border-[#717bbc] ${
+            error ? 'border-red-400' : 'border-border'
           }`}
         />
-        <input
-          value={code}
-          onChange={(event) => onCode(event.target.value)}
-          aria-label={label}
-          className="h-12 w-[34%] min-w-[92px] shrink-0 rounded-e-lg border border-[#8fbfa4] bg-white px-3 text-center text-sm text-text-primary outline-none"
-        />
+        <button
+          type="button"
+          className="h-11 shrink-0 rounded-e-lg border border-[#8fbfa4] bg-white px-4 text-sm font-semibold text-brand"
+        >
+          {t('regVerify')}
+        </button>
       </span>
       {error ? <span className="text-xs font-medium text-[#b42318]">{error}</span> : null}
     </label>
+  )
+}
+
+function BackArrow() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" className="rtl:scale-x-[-1]">
+      <path d="M15.833 10H4.167m0 0L10 4.167M4.167 10 10 15.833" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 
