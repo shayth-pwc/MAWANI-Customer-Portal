@@ -5,7 +5,7 @@ export default function Avatar({ size = 40, badge = true }) {
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
       <img
         src={images.avatar}
-        alt=""
+        alt="Profile Image"
         width={size}
         height={size}
         className="rounded-full border border-black/10 object-cover"
