@@ -324,25 +324,54 @@ export default function RequestsPage() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-3xl border border-border bg-white">
-        {rows.length === 0 ? (
+      {rows.length === 0 ? (
+        <section className="overflow-hidden rounded-3xl border border-border bg-white">
           <EmptyRequests tab={tab} onCreate={() => openModal(tab === 'objections' ? 'objection' : tab === 'permits' ? 'permit' : 'license')} />
-        ) : tab === 'permits' ? (
-          <PermitTable
-            rows={rows}
-            onOpen={(row) => setDrawer({ kind: 'permit', row })}
-            onOpenLicense={(row) => setDrawer({ kind: 'licenseDetail', row, fromList: true })}
-          />
-        ) : tab === 'objections' ? (
-          <ObjectionTable
-            rows={rows}
-            onOpen={(row) => setDrawer({ kind: 'objection', row })}
-            onOpenViolation={(row) => setDrawer({ kind: 'violation', row, fromList: true })}
-          />
-        ) : (
-          <LicenseTable rows={rows} onOpen={(row) => setDrawer({ kind: 'license', row })} />
-        )}
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="hidden overflow-hidden rounded-3xl border border-border bg-white lg:block">
+            {tab === 'permits' ? (
+              <PermitTable
+                rows={rows}
+                onOpen={(row) => setDrawer({ kind: 'permit', row })}
+                onOpenLicense={(row) => setDrawer({ kind: 'licenseDetail', row, fromList: true })}
+              />
+            ) : tab === 'objections' ? (
+              <ObjectionTable
+                rows={rows}
+                onOpen={(row) => setDrawer({ kind: 'objection', row })}
+                onOpenViolation={(row) => setDrawer({ kind: 'violation', row, fromList: true })}
+              />
+            ) : (
+              <LicenseTable rows={rows} onOpen={(row) => setDrawer({ kind: 'license', row })} />
+            )}
+          </section>
+          <div className="flex flex-col gap-3 lg:hidden">
+            {tab === 'permits'
+              ? rows.map((row) => (
+                  <PermitRequestMobileCard
+                    key={row.id}
+                    row={row}
+                    onOpen={() => setDrawer({ kind: 'permit', row })}
+                    onOpenLicense={() => setDrawer({ kind: 'licenseDetail', row, fromList: true })}
+                  />
+                ))
+              : tab === 'objections'
+                ? rows.map((row) => (
+                    <ObjectionRequestMobileCard
+                      key={row.id}
+                      row={row}
+                      onOpen={() => setDrawer({ kind: 'objection', row })}
+                      onOpenViolation={() => setDrawer({ kind: 'violation', row, fromList: true })}
+                    />
+                  ))
+                : rows.map((row) => (
+                    <LicenseRequestMobileCard key={row.id} row={row} onOpen={() => setDrawer({ kind: 'license', row })} />
+                  ))}
+          </div>
+        </>
+      )}
 
       <DetailsDrawer
         drawer={drawer}
@@ -506,6 +535,89 @@ function LicenseTable({ rows, onOpen }) {
         </Row>
       ))}
     </TableShell>
+  )
+}
+
+function LicenseRequestMobileCard({ row, onOpen }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+        <StatusPill status={showStatus(t, language, row.status)} tone={row.status} />
+      </div>
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{showText(t, language, row.service)}</h2>
+      <p className="mt-1 text-sm text-text-tertiary">{showText(t, language, row.company)}</p>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.date)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqRequestDate')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.amount}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqAmountSar')}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <InfoButton label={t('reqViewRequest', { number: row.number })} onClick={onOpen} />
+      </div>
+    </article>
+  )
+}
+
+function PermitRequestMobileCard({ row, onOpen, onOpenLicense }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+        <StatusPill status={showStatus(t, language, row.status)} tone={row.status} />
+      </div>
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{showText(t, language, row.permitType)}</h2>
+      <div className="mt-2 flex items-center gap-2 text-sm text-text-tertiary">
+        <span className="min-w-0 truncate">{showText(t, language, row.license)}</span>
+        <InfoButton label={t('reqViewNamed', { name: row.license })} onClick={onOpenLicense} />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.date)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqRequestDate')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{showText(t, language, row.ports)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqPorts')}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <InfoButton label={t('reqViewPermit', { number: row.number })} onClick={onOpen} />
+      </div>
+    </article>
+  )
+}
+
+function ObjectionRequestMobileCard({ row, onOpen, onOpenViolation }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+        <StatusPill status={showStatus(t, language, row.status)} tone={row.status} />
+      </div>
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{row.subject}</h2>
+      <div className="mt-2 flex items-center gap-2 text-sm text-text-tertiary">
+        <span className="min-w-0 truncate">{showText(t, language, row.related)}</span>
+        <InfoButton label={t('reqViewNamed', { name: row.related })} onClick={onOpenViolation} />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.date)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqRequestDate')}</p>
+        </div>
+        <div className="flex items-end justify-end">
+          <InfoButton label={t('reqViewRequest', { number: row.number })} onClick={onOpen} />
+        </div>
+      </div>
+    </article>
   )
 }
 

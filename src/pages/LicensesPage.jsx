@@ -3,6 +3,7 @@ import { icons } from '../assets'
 import Button from '../components/ui/Button'
 import DateField from '../components/ui/DateField'
 import { AttachmentSection, DrawerClose, FeaturedIcon } from '../components/common/InfoDrawer'
+import LoadingCards from '../components/common/LoadingCards'
 import {
   COMMERCIAL_REGISTRATIONS,
   INVESTOR_TYPES,
@@ -301,9 +302,7 @@ export default function LicensesPage() {
       ) : null}
 
       {loading ? (
-        <section className="overflow-hidden rounded-3xl border border-border bg-white">
-          <LoadingTable />
-        </section>
+        <LoadingCards />
       ) : rows.length === 0 ? (
         <section className="overflow-hidden rounded-3xl border border-border bg-white">
           <EmptyLicenses onCreate={() => setModalOpen(true)} requests={tab === 'requests'} />
@@ -619,30 +618,6 @@ function Hint({ label, body, wide = false, children }) {
         {body ? <span className="mt-1 block text-xs font-normal leading-5">{body}</span> : null}
       </span>
     </span>
-  )
-}
-
-function LoadingTable() {
-  const { t } = useApp()
-  const headings = [t('licNameCode'), t('licStartDateCol'), t('licExpiryDate'), t('invStatus'), t('reqServiceType'), t('reqCrNational'), t('licAmountSarCol'), t('reqCompanyName')]
-  return (
-    <div className="px-6 py-4">
-      <div className="mb-3 flex justify-end gap-3">
-        <span className="h-8 w-24 animate-pulse rounded-lg bg-[#f2f4f7]" />
-        <span className="h-8 w-10 animate-pulse rounded-lg bg-[#f2f4f7]" />
-        <span className="h-8 w-28 animate-pulse rounded-lg bg-[#f2f4f7]" />
-      </div>
-      <div className="grid grid-cols-8 gap-4 border-b border-border pb-3 text-xs font-semibold text-text-tertiary">
-        {headings.map((heading) => <span key={heading}>{heading}</span>)}
-      </div>
-      <div className="flex flex-col gap-5 py-4">
-        {Array.from({ length: 11 }, (_, index) => (
-          <div key={index} className="grid grid-cols-8 gap-4">
-            {headings.map((heading) => <span key={heading} className="h-3 animate-pulse rounded-full bg-[#f2f4f7]" />)}
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 

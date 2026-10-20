@@ -11,6 +11,7 @@ import {
 } from '../constants/violations'
 import DateField from '../components/ui/DateField'
 import { AttachmentSection, DrawerClose, FeaturedIcon } from '../components/common/InfoDrawer'
+import LoadingCards from '../components/common/LoadingCards'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useApp } from '../hooks/useApp'
 import { formatNamedDate } from '../utils/formatDate'
@@ -254,22 +255,48 @@ export default function ViolationsPage() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-3xl border border-border bg-white">
-        {loading ? (
-          <LoadingTable />
-        ) : rows.length === 0 ? (
+      {loading ? (
+        <LoadingCards />
+      ) : rows.length === 0 ? (
+        <section className="overflow-hidden rounded-3xl border border-border bg-white">
           <EmptyViolations tab={tab} />
-        ) : tab === 'requests' ? (
-          <RequestTable rows={rows} onOpenObjection={setDrawer} onOpenViolation={(row) => setDrawer({ kind: 'related', violation: violations[0], request: row, fromList: true })} />
-        ) : (
-          <FineTable
-            rows={rows}
-            unpaid={tab === 'unpaid'}
-            onOpen={(row) => setDrawer({ kind: 'violation', violation: row })}
-            onObject={() => openObjection(true)}
-          />
-        )}
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="hidden overflow-hidden rounded-3xl border border-border bg-white lg:block">
+            {tab === 'requests' ? (
+              <RequestTable rows={rows} onOpenObjection={setDrawer} onOpenViolation={(row) => setDrawer({ kind: 'related', violation: violations[0], request: row, fromList: true })} />
+            ) : (
+              <FineTable
+                rows={rows}
+                unpaid={tab === 'unpaid'}
+                onOpen={(row) => setDrawer({ kind: 'violation', violation: row })}
+                onObject={() => openObjection(true)}
+              />
+            )}
+          </section>
+          <div className="flex flex-col gap-3 lg:hidden">
+            {tab === 'requests'
+              ? rows.map((row) => (
+                  <ObjectionMobileCard
+                    key={row.id}
+                    row={row}
+                    onOpenObjection={() => setDrawer({ kind: 'objection', request: row })}
+                    onOpenViolation={() => setDrawer({ kind: 'related', violation: violations[0], request: row, fromList: true })}
+                  />
+                ))
+              : rows.map((row) => (
+                  <FineMobileCard
+                    key={row.id}
+                    row={row}
+                    unpaid={tab === 'unpaid'}
+                    onOpen={() => setDrawer({ kind: 'violation', violation: row })}
+                    onObject={() => openObjection(true)}
+                  />
+                ))}
+          </div>
+        </>
+      )}
 
       <ViolationDrawer
         drawer={drawer}
@@ -460,22 +487,70 @@ function Hint({ label, children }) {
   )
 }
 
-function LoadingTable() {
-  const { t } = useApp()
-  const headings = [t('vioFineIdDesc'), t('reqObjectionSubject'), t('reqType'), t('reqFineAmount'), t('reqCompanyName'), t('reqObjectionExpiry'), t('invStatus')]
+function FineMobileCard({ row, unpaid, onOpen, onObject }) {
+  const { t, language } = useApp()
   return (
-    <div className="px-6 py-4">
-      <div className="grid grid-cols-7 gap-4 border-b border-border pb-3 text-xs font-semibold text-text-tertiary">
-        {headings.map((heading) => <span key={heading}>{heading}</span>)}
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{row.fineId}</p>
+        {unpaid ? null : (
+          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{statusLabel(t, row.status)}</span>
+        )}
       </div>
-      <div className="flex flex-col gap-5 py-4">
-        {Array.from({ length: 11 }, (_, index) => (
-          <div key={index} className="grid grid-cols-7 gap-4">
-            {headings.map((heading) => <span key={heading} className="h-3 animate-pulse rounded-full bg-[#f2f4f7]" />)}
-          </div>
-        ))}
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{displayValue(t, language, row.description)}</h2>
+      <p className="mt-1 text-sm text-text-tertiary">{row.subject}</p>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.amount}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('vioFineAmountSar')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{namedDate(language, row.expiry, row.expiryLabel)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('licExpiryDate')}</p>
+        </div>
       </div>
-    </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-sm text-text-tertiary">{displayValue(t, language, row.company)}</p>
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" aria-label={t('vioRequestObjection')} className="rounded-md p-1.5" onClick={onObject}>
+            <img src={icons.fileX02} alt="" />
+          </button>
+          <button type="button" aria-label={t('reqViewNamed', { name: row.fineId })} className="rounded-md p-1.5" onClick={onOpen}>
+            <img src={icons.info} alt="" width={16} height={16} />
+          </button>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function ObjectionMobileCard({ row, onOpenObjection, onOpenViolation }) {
+  const { t, language } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{t('reqRequestNumber')}: {row.number}</p>
+        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(row.status)}`}>{statusLabel(t, row.status)}</span>
+      </div>
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{row.subject}</h2>
+      <div className="mt-3 flex items-center gap-2 text-sm text-text-tertiary">
+        <span className="min-w-0 truncate">{displayValue(t, language, row.related)}</span>
+        <button type="button" aria-label={t('reqViewNamed', { name: row.related })} className="shrink-0 rounded-md p-1" onClick={onOpenViolation}>
+          <img src={icons.info} alt="" width={16} height={16} />
+        </button>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{displayDate(row.date)}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('reqRequestDate')}</p>
+        </div>
+        <div className="flex items-end justify-end">
+          <button type="button" aria-label={t('reqViewRequest', { number: row.number })} className="rounded-md p-1.5" onClick={onOpenObjection}>
+            <img src={icons.info} alt="" width={16} height={16} />
+          </button>
+        </div>
+      </div>
+    </article>
   )
 }
 

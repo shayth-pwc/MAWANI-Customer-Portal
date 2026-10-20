@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { icons } from '../assets'
 import Button from '../components/ui/Button'
 import DateField from '../components/ui/DateField'
+import LoadingCards from '../components/common/LoadingCards'
 import { INVOICES, INVOICE_REQUESTS } from '../constants/invoices'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useApp } from '../hooks/useApp'
@@ -303,24 +304,35 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-3xl border border-border bg-white">
-        {loading ? (
-          <LoadingTable requests={tab === 'requests'} />
-        ) : empty ? (
+      {loading ? (
+        <LoadingCards />
+      ) : empty ? (
+        <section className="overflow-hidden rounded-3xl border border-border bg-white">
           <EmptyInvoices requests={tab === 'requests'} onCreate={() => setModalOpen(true)} />
-        ) : tab === 'invoices' ? (
-          <InvoiceTable
-            rows={invoiceRows}
-            amountWidth={amountWidth}
-            resizing={resizing}
-            vatSort={vatSort}
-            onSort={() => setVatSort((current) => (current === 'asc' ? 'desc' : 'asc'))}
-            onResizeStart={startResize}
-          />
-        ) : (
-          <RequestTable rows={requestRows} />
-        )}
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="hidden overflow-hidden rounded-3xl border border-border bg-white lg:block">
+            {tab === 'invoices' ? (
+              <InvoiceTable
+                rows={invoiceRows}
+                amountWidth={amountWidth}
+                resizing={resizing}
+                vatSort={vatSort}
+                onSort={() => setVatSort((current) => (current === 'asc' ? 'desc' : 'asc'))}
+                onResizeStart={startResize}
+              />
+            ) : (
+              <RequestTable rows={requestRows} />
+            )}
+          </section>
+          <div className="flex flex-col gap-3 lg:hidden">
+            {tab === 'invoices'
+              ? invoiceRows.map((row) => <InvoiceMobileCard key={row.id} row={row} />)
+              : requestRows.map((row) => <InvoiceRequestMobileCard key={row.id} row={row} />)}
+          </div>
+        </>
+      )}
 
       <NewInvoiceModal open={modalOpen} onClose={() => setModalOpen(false)} onConfirm={createRequest} />
     </div>
@@ -498,40 +510,75 @@ function RequestTable({ rows }) {
   )
 }
 
+function invoiceStatusClass(status) {
+  if (status === 'Paid' || status === 'Approved') return 'border-success-200 bg-success-50 text-success-700'
+  if (status === 'Expired') return 'border-[#d5d9eb] bg-[#f8f9fc] text-[#515481]'
+  return 'border-[#d5d9eb] bg-[#f8f9fc] text-[#363f72]'
+}
+
 function StatusPill({ status }) {
   const { t } = useApp()
-  const approved = status === 'Approved'
   return (
-    <span
-      className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${
-        approved ? 'border-success-200 bg-success-50 text-success-700' : 'border-[#d5d9eb] bg-[#f8f9fc] text-[#363f72]'
-      }`}
-    >
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${invoiceStatusClass(status)}`}>
       {localizeValue(t, status)}
     </span>
   )
 }
 
-function LoadingTable({ requests }) {
+function InvoiceMobileCard({ row }) {
   const { t } = useApp()
-  const columns = requests ? REQUEST_COLUMNS : INVOICE_COLUMNS
   return (
-    <div className="px-6 py-4">
-      <div className="mb-4 grid gap-6 border-b border-border pb-3 text-xs font-semibold text-text-tertiary" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
-        {columns.map((key) => (
-          <span key={key}>{t(key)}</span>
-        ))}
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{row.code}</p>
+        <StatusPill status={row.status} />
       </div>
-      <div className="flex flex-col gap-5 py-2">
-        {Array.from({ length: 11 }, (_, index) => (
-          <div key={index} className="grid gap-6" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
-            {Array.from({ length: columns.length }, (_, cell) => (
-              <span key={cell} className={`h-3 animate-pulse rounded-full bg-[#f2f4f7] ${cell === 0 ? 'w-4/5' : 'w-2/3'}`} />
-            ))}
-          </div>
-        ))}
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{localizeValue(t, row.description)}</h2>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.amount}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('invAmount')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.total}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('invTotal')}</p>
+        </div>
       </div>
-    </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-sm text-text-tertiary">
+          {t('invVatApplication')}: <span className="font-medium text-text-primary">{localizeValue(t, row.vatApplication)}</span>
+        </p>
+        <button type="button" aria-label={t('invPrint')} onClick={() => printInvoice(row, t)} className="rounded-md p-1.5">
+          <img src={icons.printer} alt="" width={20} height={20} />
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function InvoiceRequestMobileCard({ row }) {
+  const { t } = useApp()
+  return (
+    <article className="rounded-2xl border border-border bg-white p-4 shadow-xs">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-text-tertiary">{row.code}</p>
+        <StatusPill status={row.status} />
+      </div>
+      <h2 className="mt-2 text-md font-semibold leading-6 text-text-primary">{localizeValue(t, row.description)}</h2>
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.invoiceNumber}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('invInvoiceNumber')}</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-text-primary">{row.amount}</p>
+          <p className="mt-0.5 text-xs text-text-tertiary">{t('invAmount')}</p>
+        </div>
+      </div>
+      <p className="mt-3 text-sm text-text-tertiary">
+        {t('invSadadNumber')}: <span className="font-medium text-text-primary">{row.sadad}</span>
+      </p>
+    </article>
   )
 }
 

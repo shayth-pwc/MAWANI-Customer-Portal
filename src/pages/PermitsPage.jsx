@@ -3,6 +3,7 @@ import { icons } from '../assets'
 import Button from '../components/ui/Button'
 import DateField from '../components/ui/DateField'
 import { AttachmentSection, DrawerClose, FeaturedIcon } from '../components/common/InfoDrawer'
+import LoadingCards from '../components/common/LoadingCards'
 import {
   PERMIT_LICENSES,
   PERMIT_REQUESTS,
@@ -252,9 +253,11 @@ export default function PermitsPage() {
         <FilterSheet tab={tab} draft={draftFilters} onChange={setDraftFilters} onCancel={() => setFiltersOpen(false)} onApply={applyFilters} />
       ) : null}
 
-      {loading || visible.length === 0 ? (
+      {loading ? (
+        <LoadingCards />
+      ) : visible.length === 0 ? (
         <section className="overflow-hidden rounded-3xl border border-border bg-white">
-          {loading ? <LoadingTable /> : <EmptyPermits onCreate={() => setModalOpen(true)} />}
+          <EmptyPermits onCreate={() => setModalOpen(true)} />
         </section>
       ) : tab === 'licenses' ? (
         <div className="flex flex-col gap-4">
@@ -599,25 +602,6 @@ function InfoButton({ label, onClick }) {
     <button type="button" aria-label={label} className="rounded-md p-1" onClick={onClick}>
       <img src={icons.info} alt="" width={16} height={16} />
     </button>
-  )
-}
-
-function LoadingTable() {
-  const { t } = useApp()
-  const headings = [t('perPermitNumber'), t('reqCompanyName'), t('reqPermitType'), t('perStartDate'), t('perExpiryDate'), t('perCancelDate'), t('reqRelatedLicense')]
-  return (
-    <div className="px-6 py-4">
-      <div className="grid grid-cols-7 gap-4 border-b border-border pb-3 text-xs font-semibold text-text-tertiary">
-        {headings.map((heading) => <span key={heading}>{heading}</span>)}
-      </div>
-      <div className="flex flex-col gap-5 py-4">
-        {Array.from({ length: 11 }, (_, index) => (
-          <div key={index} className="grid grid-cols-7 gap-4">
-            {headings.map((heading) => <span key={heading} className="h-3 animate-pulse rounded-full bg-[#f2f4f7]" />)}
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
