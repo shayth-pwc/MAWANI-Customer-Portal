@@ -23,3 +23,34 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local backups from applying the Mawani BTP integration
+.mawani-phase2-originals-*/
+.mawani-phase2-router-backup-*/
+
+# Dependencies and generated files
+**/node_modules/
+**/dist/
+**/coverage/
+**/mta_archives/
+**/*_mta_build_tmp/
+**/*.mtar
+
+# Local backups
+**/.mawani-*/
+**/*backup*/
+**/_archive/
+
+# Environment and credentials
+**/.env
+**/.env.*
+!**/.env.example
+**/default-env.json
+**/.cdsrc-private.json
+**/service-key*
+**/*.pem
+**/*.key
+**/*.p12
+
+# Generated React files inside Application Router
+/backend/.deploy/app-router/portal-bootstrap/

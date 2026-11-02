@@ -21,8 +21,9 @@ const pageMeta = {
 }
 
 export default function AppLayout() {
-  const { signedIn, t, setContactOpen } = useApp()
+  const { signedIn, t, setContactOpen, language } = useApp()
   const { pathname } = useLocation()
+  const adminUserPage = pathname === '/user-management'
   const [collapsed, setCollapsed] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
@@ -54,8 +55,8 @@ export default function AppLayout() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
-          title={t(meta.titleKey)}
-          supporting={meta.supportingKey ? t(meta.supportingKey) : ''}
+          title={adminUserPage ? (language === 'ar' ? 'إدارة المستخدمين' : 'User Management') : t(meta.titleKey)}
+          supporting={adminUserPage ? (language === 'ar' ? 'إدارة حسابات SAP IAS' : 'Manage SAP IAS accounts') : (meta.supportingKey ? t(meta.supportingKey) : '')}
           showHeader={!pageOwnsTitle}
           onToggleMenu={() => setMobileOpen(true)}
           panel={panel}

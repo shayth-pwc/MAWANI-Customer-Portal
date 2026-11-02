@@ -1,6 +1,6 @@
 // Calls return null while VITE_API_BASE_URL is empty, so screens keep their static data.
 // Set VITE_API_BASE_URL to the mount that already includes /api or /mawani-api.
-// VITE_API_TOKEN is sent as a bearer token when it is set.
+// Browser requests use same-origin IAS App Router cookies. Never bundle a bearer token.
 
 import { ApiError, apiErrorFromResponse, toApiError } from './errors'
 import { RequestError } from './requestError'
@@ -29,7 +29,6 @@ function withQuery(url, params) {
 }
 
 export function createApiClient(options = {}) {
-  const token = (options.token ?? import.meta.env.VITE_API_TOKEN ?? '').trim()
   const baseURL = (options.baseURL ?? import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
   async function send(method, url, body, config = {}) {
@@ -37,7 +36,6 @@ export function createApiClient(options = {}) {
 
     const headers = new Headers(config.headers)
     if (!headers.has('Accept')) headers.set('Accept', 'application/json')
-    if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`)
 
     let payload
     if (body instanceof FormData) {
@@ -50,6 +48,7 @@ export function createApiClient(options = {}) {
     try {
       const response = await fetch(`${baseURL}${withQuery(url, config.params)}`, {
         method,
+        credentials: 'same-origin',
         headers,
         body: payload,
         signal: config.signal,

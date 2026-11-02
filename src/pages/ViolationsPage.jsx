@@ -306,6 +306,7 @@ export default function ViolationsPage() {
         onOpenRelated={(request) => setDrawer({ kind: 'related', violation: violations[0], request })}
       />
       <ObjectionModal
+        key={modalOpen ? 'open' : 'closed'}
         open={modalOpen}
         fromRow={modalFromRow}
         onClose={() => setModalOpen(false)}
@@ -716,8 +717,6 @@ function ObjectionModal({ open, fromRow, onClose, onSubmit }) {
 
   useEffect(() => {
     if (!open) return undefined
-    setForm(blankObjection)
-    setDirty(false)
     const onKey = (event) => {
       if (event.key === 'Escape') onClose()
     }

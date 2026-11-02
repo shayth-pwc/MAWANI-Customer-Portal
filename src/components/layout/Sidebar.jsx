@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { icons, images } from '../../assets'
 import { ACCOUNT_TYPES, PRIMARY_NAV } from '../../constants/navigation'
 import { useApp } from '../../hooks/useApp'
+import { useAdminAccess } from '../../hooks/useAdminAccess'
 import { useClickOutside } from '../../hooks/useClickOutside'
 import Avatar from '../ui/Avatar'
 import Button from '../ui/Button'
@@ -24,6 +25,7 @@ export default function Sidebar({
   const [draftAccount, setDraftAccount] = useState(accountType)
   useClickOutside(supportRef, onCloseSupport, supportOpen)
 
+  const { status: adminAccess } = useAdminAccess()
   const showLabels = !collapsed || mobileOpen
 
   const closeMobile = () => {
@@ -130,6 +132,30 @@ export default function Sidebar({
                 )}
               </NavLink>
             ))}
+                      {adminAccess === 'allowed' ? (
+              <NavLink
+                to="/user-management"
+                title={language === 'ar' ? 'إدارة المستخدمين' : 'User Management'}
+                onClick={closeMobile}
+                className={({ isActive }) =>
+                  `relative flex h-10 items-center gap-3 rounded-lg text-sm font-semibold ${
+                    isActive ? (mobileOpen ? 'bg-bg-active text-brand' : 'bg-bg-active text-text-primary')
+                      : 'text-text-secondary hover:bg-bg-neutral'
+                  } ${showLabels ? 'px-3' : 'w-10 justify-center'}`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {!mobileOpen && isActive ? (
+                      <span aria-hidden="true" className={`pointer-events-none absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-brand ${showLabels ? '-start-2.5' : '-start-3.5'}`} />
+                    ) : null}
+                    <Icon name="user" size={20} />
+                    {showLabels ? <span className="truncate">{language === 'ar' ? 'إدارة المستخدمين' : 'User Management'}</span> :
+                      <span className="sr-only">{language === 'ar' ? 'إدارة المستخدمين' : 'User Management'}</span>}
+                  </>
+                )}
+              </NavLink>
+            ) : null}
           </nav>
         </div>
 

@@ -1,0 +1,86 @@
+_schema-version: '3.3'
+ID: mawani-customer-portal-backend
+version: 0.7.4
+
+modules:
+  # Preserve the existing deployed CAP backend and CF route.
+  - name: mawani-portal-srv
+    type: nodejs
+    path: .
+    properties:
+      MAWANI_PORTAL_ADMIN_GROUP_ID: f42bbefb-eef9-49b9-be08-fac5e73636ba
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 512M
+      routes:
+        - route: ${default-url}
+        - route: ${default-host}.cert.${default-domain}
+    build-parameters:
+      # The backend module has path: ., so explicitly prevent packaging local credentials,
+      # the router's dev credentials, archive outputs and other local-only material.
+      ignore:
+        - .env
+        - .env.*
+        - .cdsrc-private.json
+        - .deploy/
+        - .git/
+        - node_modules/
+        - mta_archives/
+        - gen/
+        - test/
+        - docs/
+        - coverage/
+        - '*.mtar'
+        - '*.pem'
+        - '*.key'
+        - '*.p12'
+    requires:
+      - name: mawani-postgres
+      - name: mawani-ias
+        parameters:
+          config:
+            credential-type: X509_GENERATED
+            app-identifier: srv
+    provides:
+      - name: mawani-backend-url
+        properties:
+          url: ${default-url}
+          cert-url: ${protocol}://${default-host}.cert.${default-domain}
+
+  # One router only; it shares the same identity service as the CAP backend.
+  - name: mawani-portal-router
+    type: approuter.nodejs
+    path: .deploy/app-router
+    parameters:
+      memory: 256M
+      disk-quota: 512M
+    build-parameters:
+      ignore:
+        - default-env.json
+        - node_modules/
+        - .env
+        - .env.*
+    requires:
+      - name: mawani-ias
+        parameters:
+          config:
+            credential-type: X509_GENERATED
+            app-identifier: approuter
+      - name: mawani-backend-url
+        group: destinations
+        properties:
+          name: srv-api
+          url: ~{cert-url}
+          forwardAuthToken: true
+          forwardAuthCertificates: true
+          strictSSL: true
+
+resources:
+  - name: mawani-postgres
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: PostgreSQL-Hyperscaler-inst
+  - name: mawani-ias
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: CIS-app-Inst

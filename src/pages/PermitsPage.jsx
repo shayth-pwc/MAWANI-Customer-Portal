@@ -314,6 +314,7 @@ export default function PermitsPage() {
         }}
       />
       <PermitModal
+        key={modalOpen ? 'open' : 'closed'}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={(draft) => {
@@ -815,8 +816,6 @@ function PermitModal({ open, onClose, onSubmit }) {
 
   useEffect(() => {
     if (!open) return undefined
-    setForm({ permitType: 'Activity In Port', licenseNumber: '1010006817', ports: 'Jubail Commercial', fileName: '', accepted: false })
-    setExpanded(false)
     const onKey = (event) => { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)

@@ -6,22 +6,10 @@
 
 export const INITIAL_DETAILS = {
   photo: '',
-  firstName: 'Loki',
-  fatherName: 'Name',
-  grandfatherName: 'Name',
-  lastName: 'Bright',
-  nationality: '',
-  documentType: '',
-  documentNo: '1001743333',
-  email: 'Loki@mawani.com',
-  phone: '555-000-0000',
-  dob: '',
-  gender: '',
-  building: '148',
-  apartment: '1112',
-  street: 'Olaya',
-  city: 'Al Riyadh',
-  postal: '11322',
+  firstName: '', fatherName: '', grandfatherName: '', lastName: '',
+  nationality: '', documentType: '', documentNo: '',
+  email: '', phone: '', dob: '', gender: '',
+  building: '', apartment: '', street: '', city: '', postal: '',
 }
 
 export const NATIONALITIES = ['Saudi Arabia', 'United Arab Emirates', 'Bahrain', 'Kuwait', 'Oman', 'Qatar']
@@ -133,4 +121,4 @@ export const INITIAL_ACTIVITIES = [
   { id: 'a2', code: 'إنشاء الجسور أو الأنفاق', name: 'Construction of bridges or tunnels' },
 ]
 
-export const PREVIOUS_PASSWORD = 'Mawani@2024'
+// Password history belongs to SAP IAS; do not ship a sample password.

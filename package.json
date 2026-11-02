@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:btp": "node --test test/btp-session.test.mjs",
+    "stage:btp": "node scripts/stage-react-to-btp.mjs",
+    "test:admin": "node --test test/admin-ias.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

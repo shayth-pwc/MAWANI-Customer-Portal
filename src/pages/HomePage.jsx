@@ -38,6 +38,7 @@ export default function HomePage({ empty = false }) {
 
   return (
     <PageContainer alignStart className="pt-4">
+      {data.isDemo ? <p role="status" className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-text-secondary">{language === 'ar' ? 'البيانات المعروضة تجريبية حتى يتم ربط واجهات الخدمات.' : 'Business information shown here is demonstration data until the service APIs are connected.'}</p> : null}
       <section>
         <h2 className="mb-4 text-lg font-semibold leading-7 text-text-secondary">{t('glance')}</h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6 xl:gap-6">

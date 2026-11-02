@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { images } from '../assets'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useApp } from '../hooks/useApp'
@@ -36,7 +36,6 @@ const DOCUMENT_TYPES = ['regDocNationalId', 'regDocIqama', 'regDocPassport']
 
 export default function RegisterPage() {
   const { t, language, toggleLanguage, signedIn, boot, enterApp } = useApp()
-  const navigate = useNavigate()
   const [accountType, setAccountType] = useState('companies')
   const [profile, setProfile] = useState('local')
   const [identity, setIdentity] = useState('')
@@ -55,6 +54,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [registrationUnavailable, setRegistrationUnavailable] = useState(false)
 
   if (signedIn && boot === 'idle') return <Navigate to="/" replace />
 
@@ -62,11 +62,9 @@ export default function RegisterPage() {
   const named = personal || profile === 'poa'
   const profiles = accountType === 'employee' ? EMPLOYEE_PROFILES : accountType === 'individual' ? INDIVIDUAL_PROFILES : PROFILES
 
-  const openAccount = async () => {
+  const openAccount = () => {
     setSubmitting(true)
-    const pending = enterApp()
-    navigate('/', { replace: true })
-    await pending
+    enterApp()
   }
 
   const submit = async (event) => {
@@ -90,7 +88,8 @@ export default function RegisterPage() {
     }
     setErrors(next)
     if (Object.keys(next).length || submitting) return
-    await openAccount()
+    // The v0.7.4 backend exposes admin-only user creation, not public signup.
+    setRegistrationUnavailable(true)
   }
 
   return (
@@ -125,6 +124,8 @@ export default function RegisterPage() {
             </button>
           </div>
           <h1 className="mt-6 text-center text-display-sm font-semibold tracking-[-0.02em] text-text-primary">{t('signUpTitle')}</h1>
+          <p className="mt-3 max-w-xl text-center text-sm text-text-secondary">{language === 'ar' ? 'التسجيل الذاتي غير متاح حالياً. يرجى التواصل مع مسؤول البوابة لإنشاء حساب SAP IAS.' : 'Self-registration is not yet enabled. Contact the portal administrator to create an SAP IAS account.'}</p>
+          {registrationUnavailable ? <p role="alert" className="mt-2 text-center text-sm text-[#b42318]">{language === 'ar' ? 'لم يتم إنشاء حساب.' : 'No account was created.'}</p> : null}
           <p className="mt-2 text-center text-md text-text-tertiary">{t('signUpBody')}</p>
 
           <div className="mt-6 flex w-full gap-1 rounded-xl bg-[#f2f4f7] p-1">
@@ -386,7 +387,7 @@ export default function RegisterPage() {
 
           <div className="my-6 h-px w-full bg-border" />
           <button type="button" className="inline-flex items-center gap-2 text-center text-sm font-semibold text-brand" onClick={openAccount} disabled={submitting}>
-            {t('nafathSignIn')}
+            {language === 'ar' ? 'المتابعة عبر SAP IAS' : 'Continue with SAP IAS'}
             <InfoMark />
           </button>
           <p className="mt-3 text-center text-sm text-text-tertiary">
