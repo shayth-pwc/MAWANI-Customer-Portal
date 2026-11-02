@@ -1,20 +1,23 @@
 import { useState } from 'react'
-import { NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { icons, images } from '../assets'
 import Dialog from '../components/profile/Dialog'
 import Button from '../components/ui/Button'
 import { INITIAL_DETAILS } from '../constants/profile'
+import { toProfileDetails } from '../services/portalProfile'
 import { useApp } from '../hooks/useApp'
 
 export default function ProfileLayout() {
-  const { signedIn, t } = useApp()
+  const { signedIn, t, language, profile } = useApp()
+  const { pathname } = useLocation()
+  const selfProfile = pathname === '/profile'
   const tabs = [
     { to: '/profile', label: t('crMyDetails'), end: true },
     { to: '/profile/registration', label: t('crCommercial') },
   ]
   const navigate = useNavigate()
-  const [details, setDetails] = useState(INITIAL_DETAILS)
-  const [baseline, setBaseline] = useState(INITIAL_DETAILS)
+  const [details, setDetails] = useState(() => toProfileDetails(profile, INITIAL_DETAILS))
+  const [baseline, setBaseline] = useState(() => toProfileDetails(profile, INITIAL_DETAILS))
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
   const [validating, setValidating] = useState(false)
@@ -58,7 +61,7 @@ export default function ProfileLayout() {
             <button
               type="button"
               className="text-sm font-semibold text-brand lg:hidden"
-              disabled={validating}
+              disabled={validating || selfProfile}
               onClick={() => setConfirmOpen(true)}
             >
               {t('save')}
@@ -73,13 +76,18 @@ export default function ProfileLayout() {
             >
               {t('crDiscard')}
             </Button>
-            <Button className="hidden lg:inline-flex" onClick={() => setConfirmOpen(true)} disabled={validating}>
+            <Button className="hidden lg:inline-flex" onClick={() => setConfirmOpen(true)} disabled={validating || selfProfile}>
               {t('save')}
             </Button>
           </div>
         </div>
       </header>
 
+      {selfProfile ? (
+        <p role="status" className="mx-auto w-full max-w-[1280px] px-4 pt-4 text-sm text-text-secondary sm:px-8 lg:px-16">
+          {language === 'ar' ? 'تم تحميل بيانات الملف الشخصي من البوابة. حفظ التعديلات غير متاح حتى توفير واجهة API لتحديث الملف الشخصي.' : 'Profile identity is loaded from the portal. Saving edits is not available until a self-service update API is added.'}
+        </p>
+      ) : null}
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8 lg:flex-row lg:px-16">
         <div className="lg:hidden">
           <h1 className="text-display-xs font-semibold text-text-primary">{t('companyProfile')}</h1>

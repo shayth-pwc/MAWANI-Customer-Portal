@@ -1,0 +1,52 @@
+{
+  "authenticationMethod": "route",
+  "logout": {
+    "logoutEndpoint": "/logout",
+    "logoutPage": "/signed-out"
+  },
+  "routes": [
+    {
+      "source": "^/profile(?:/(?:registration|password))?/?$",
+      "target": "index.html",
+      "localDir": "portal-bootstrap",
+      "authenticationType": "ias",
+      "cacheControl": "no-store"
+    },
+    {
+      "source": "^/(profile|admin)(/.*)?$",
+      "target": "/$1$2",
+      "destination": "srv-api",
+      "authenticationType": "ias",
+      "csrfProtection": true,
+      "cacheControl": "no-store"
+    },
+    {
+      "source": "^/assets/(.*)$",
+      "target": "assets/$1",
+      "localDir": "portal-bootstrap",
+      "authenticationType": "none",
+      "cacheControl": "public, max-age=31536000, immutable"
+    },
+    {
+      "source": "^/(.*\\.(?:ico|png|svg|jpg|jpeg|webp|gif|woff2?|css|js|txt|json))$",
+      "target": "$1",
+      "localDir": "portal-bootstrap",
+      "authenticationType": "none",
+      "cacheControl": "public, max-age=3600"
+    },
+    {
+      "source": "^/(login|signup|forgot-password|signed-out)$",
+      "target": "index.html",
+      "localDir": "portal-bootstrap",
+      "authenticationType": "none",
+      "cacheControl": "no-store"
+    },
+    {
+      "source": "^/(.*)$",
+      "target": "index.html",
+      "localDir": "portal-bootstrap",
+      "authenticationType": "ias",
+      "cacheControl": "no-store"
+    }
+  ]
+}

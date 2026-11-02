@@ -16,9 +16,10 @@ import SetPasswordPage from '../pages/profile/SetPasswordPage'
 import PermitsPage from '../pages/PermitsPage'
 import SurveysPage from '../pages/SurveysPage'
 import RequestsPage from '../pages/RequestsPage'
-import ServicePage from '../pages/ServicePage'
 import SettingsPage from '../pages/SettingsPage'
+import AdminUsersPage from '../pages/admin/AdminUsersPage'
 import AuthPage from '../pages/AuthPage'
+import RequirePortalSession from '../components/auth/RequirePortalSession'
 import RegisterPage from '../pages/RegisterPage'
 import SignedOutPage from '../pages/SignedOutPage'
 import SuccessPage from '../pages/SuccessPage'
@@ -34,13 +35,13 @@ export default function AppRoutes() {
         <Route path="signup" element={<RegisterPage />} />
         <Route path="forgot-password" element={<AuthPage mode="forgot" />} />
         <Route path="signed-out" element={<SignedOutPage />} />
-        <Route path="profile" element={<ProfileLayout />}>
+        <Route path="profile" element={<RequirePortalSession><ProfileLayout /></RequirePortalSession>}>
           <Route index element={<MyDetailsPage />} />
           <Route path="registration" element={<CommercialRegistrationPage />} />
         </Route>
-        <Route path="profile/password" element={<SetPasswordPage />} />
+        <Route path="profile/password" element={<RequirePortalSession><SetPasswordPage /></RequirePortalSession>} />
       </Route>
-      <Route element={<AppLayout />}>
+      <Route element={<RequirePortalSession><AppLayout /></RequirePortalSession>}>
         <Route index element={<HomePage />} />
         <Route path="empty" element={<HomePage empty />} />
         <Route path="activities" element={<ActivitiesPage />} />
@@ -53,6 +54,7 @@ export default function AppRoutes() {
         <Route path="surveys" element={<SurveysPage />} />
         <Route path="support" element={<SupportPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="user-management" element={<AdminUsersPage />} />
         <Route path="home" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

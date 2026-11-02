@@ -388,6 +388,7 @@ export default function RequestsPage() {
       />
 
       <LicenseModal
+        key={modal === 'license' ? 'open' : 'closed'}
         open={modal === 'license'}
         onClose={() => setModal(null)}
         onSubmit={(draft) => {
@@ -408,6 +409,7 @@ export default function RequestsPage() {
         }}
       />
       <PermitModal
+        key={modal === 'permit' ? 'open' : 'closed'}
         open={modal === 'permit'}
         onClose={() => setModal(null)}
         onSubmit={(draft) => {
@@ -428,6 +430,7 @@ export default function RequestsPage() {
         }}
       />
       <ObjectionModal
+        key={modal === 'objection' ? 'open' : 'closed'}
         open={modal === 'objection'}
         onClose={() => setModal(null)}
         onSubmit={(draft) => {
@@ -953,8 +956,6 @@ function LicenseModal({ open, onClose, onSubmit }) {
 
   useEffect(() => {
     if (!open) return undefined
-    setForm(blankLicense)
-    setErrors({})
     const onKey = (event) => { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -1062,8 +1063,6 @@ function PermitModal({ open, onClose, onSubmit }) {
   const [expanded, setExpanded] = useState(false)
   useEffect(() => {
     if (!open) return undefined
-    setForm(blankPermit)
-    setExpanded(false)
     const onKey = (event) => { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -1125,7 +1124,6 @@ function ObjectionModal({ open, onClose, onSubmit }) {
   const [form, setForm] = useState(blankObjection)
   useEffect(() => {
     if (!open) return undefined
-    setForm(blankObjection)
     const onKey = (event) => { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)

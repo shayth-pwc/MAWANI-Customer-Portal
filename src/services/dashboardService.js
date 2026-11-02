@@ -34,6 +34,7 @@ export function loadDashboard() {
 
 export function localDashboard() {
   return {
+    isDemo: true,
     metrics: METRICS,
     activities: ACTIVITIES,
     upcoming: UPCOMING,

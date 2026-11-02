@@ -1,0 +1,44 @@
+{
+  "name": "mawani-customer-portal-backend",
+  "version": "0.7.4",
+  "private": true,
+  "description": "Mawani Customer Portal - reusable SAP CAP backend foundation",
+  "engines": {
+    "node": "^22 || ^24"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "dev": "cds watch",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check-syntax.js",
+    "build": "cds build --production",
+    "check:ias": "node scripts/ias-preflight.js",
+    "check:db": "node scripts/db-preflight.js",
+    "check:ias:groups": "node scripts/ias-groups.js",
+    "check:provisioning": "node scripts/provisioning-preflight.js",
+    "check:admin:audit": "node scripts/admin-audit-verify.js",
+    "diagnose:provisioning": "node scripts/provisioning-diagnose.js"
+  },
+  "dependencies": {
+    "@sap/cds": "^10",
+    "@cap-js/postgres": "^3",
+    "@sap/xssec": "^4"
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^10"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "postgres"
+      },
+      "auth": {
+        "kind": "ias"
+      },
+      "queue": false
+    },
+    "features": {
+      "assert_integrity": false
+    }
+  }
+}

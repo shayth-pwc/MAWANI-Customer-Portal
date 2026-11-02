@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { images } from '../assets'
 import Button from '../components/ui/Button'
 import { useApp } from '../hooks/useApp'
@@ -8,7 +8,6 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function AuthPage({ mode = 'login' }) {
   const { t, language, toggleLanguage, signedIn, boot, enterApp } = useApp()
-  const navigate = useNavigate()
   const signup = mode === 'signup'
   const forgot = mode === 'forgot'
   const [name, setName] = useState('')
@@ -18,7 +17,7 @@ export default function AuthPage({ mode = 'login' }) {
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
+  const [resetUnavailable, setResetUnavailable] = useState(false)
 
   if (signedIn && boot === 'idle') return <Navigate to="/" replace />
 
@@ -31,18 +30,16 @@ export default function AuthPage({ mode = 'login' }) {
     return next
   }
 
-  const openAccount = async () => {
+  const openAccount = () => {
     setSubmitting(true)
-    const pending = enterApp()
-    navigate('/', { replace: true })
-    await pending
+    // Credentials are collected only by IAS, never by this React application.
+    enterApp()
   }
 
   const submit = async (event) => {
     event.preventDefault()
-    if (mode === 'login' && (!EMAIL.test(email.trim()) || password.length < 8)) {
-      setFormError(true)
-      setErrors({})
+    if (mode === 'login') {
+      openAccount()
       return
     }
     setFormError(false)
@@ -50,7 +47,8 @@ export default function AuthPage({ mode = 'login' }) {
     setErrors(next)
     if (Object.keys(next).length || submitting) return
     if (forgot) {
-      setResetSent(true)
+      // IAS manages password recovery; this frontend has no reset endpoint.
+      setResetUnavailable(true)
       return
     }
     await openAccount()
@@ -58,7 +56,7 @@ export default function AuthPage({ mode = 'login' }) {
 
   const title = forgot ? 'forgotTitle' : signup ? 'signUpTitle' : 'signInTitle'
   const body = forgot ? 'forgotBody' : signup ? 'signUpBody' : 'signInBody'
-  const loginReady = Boolean(email.trim() && password)
+  const loginReady = true
 
   return (
     <div className="min-h-screen bg-white lg:bg-[#eef1f4] lg:p-3 xl:p-5">
@@ -93,6 +91,11 @@ export default function AuthPage({ mode = 'login' }) {
             <div className="flex flex-1 flex-col justify-center py-8 lg:py-10">
               <h1 className="text-display-sm font-semibold tracking-[-0.02em] text-text-primary">{t(title)}</h1>
               <p className="mt-2 text-md text-text-tertiary">{t(body)}</p>
+              {mode === 'login' ? (
+                <p className="mt-3 text-sm text-text-secondary">
+                  {language === 'ar' ? 'سيتم إدخال بيانات الدخول بشكل آمن في صفحة SAP IAS، وليس هنا.' : 'Continue securely to SAP IAS to enter your sign-in credentials.'}
+                </p>
+              ) : null}
 
               <form className="mt-8 flex flex-col gap-5" onSubmit={submit} noValidate>
                 {formError ? <p className="text-center text-sm font-medium text-[#d92d20]">{t('loginError')}</p> : null}
@@ -109,7 +112,7 @@ export default function AuthPage({ mode = 'login' }) {
                   </Field>
                 ) : null}
 
-                <Field label={t('email')} error={formError ? ' ' : errors.email} hideMessage={formError}>
+                {mode === 'login' ? null : (<Field label={t('email')} error={formError ? ' ' : errors.email} hideMessage={formError}>
                   <input
                     type="email"
                     autoComplete="email"
@@ -121,9 +124,9 @@ export default function AuthPage({ mode = 'login' }) {
                     }}
                     className="h-11 w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-placeholder"
                   />
-                </Field>
+                </Field>)}
 
-                {forgot ? null : (
+                {forgot || mode === 'login' ? null : (
                   <Field label={t('password')} error={formError ? ' ' : errors.password} hideMessage={formError}>
                     <input
                       type="password"
@@ -158,7 +161,7 @@ export default function AuthPage({ mode = 'login' }) {
                   </Link>
                 ) : null}
 
-                {resetSent ? <p className="text-sm text-text-secondary">{t('resetSent')}</p> : null}
+                {resetUnavailable ? <p role="alert" className="text-sm text-text-secondary">{language === 'ar' ? 'استعادة كلمة المرور تتم عبر SAP IAS. استخدم خيارات الاستعادة في صفحة الدخول.' : 'Password recovery is managed by SAP IAS. Use the recovery options on its sign-in page.'}</p> : null}
 
                 {mode === 'login' && !loginReady ? (
                   <button
@@ -170,7 +173,7 @@ export default function AuthPage({ mode = 'login' }) {
                     <Arrow />
                   </button>
                 ) : (
-                  <Button type="submit" className="h-11 w-full" disabled={submitting || resetSent}>
+                  <Button type="submit" className="h-11 w-full" disabled={submitting || resetUnavailable}>
                     {t(forgot ? 'sendReset' : signup ? 'createAccount' : 'signIn')}
                     <Arrow />
                   </Button>
@@ -186,7 +189,7 @@ export default function AuthPage({ mode = 'login' }) {
                     onClick={openAccount}
                     disabled={submitting}
                   >
-                    {t('nafathSignIn')}
+                    {language === 'ar' ? 'المتابعة عبر SAP IAS' : 'Continue with SAP IAS'}
                     <InfoMark />
                   </button>
                   <p className="mt-5 text-center text-sm text-text-tertiary">

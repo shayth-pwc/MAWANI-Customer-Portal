@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { icons } from '../../assets'
-import { PREVIOUS_PASSWORD } from '../../constants/profile'
 import { useApp } from '../../hooks/useApp'
 
 const GUESSABLE = ['password', 'mawani', 'loki', 'bright', '123456', 'qwerty']
@@ -13,7 +12,7 @@ function ruleState(password) {
     special: /[^A-Za-z0-9]/.test(password),
     letters: /[a-z]/.test(password) && /[A-Z]/.test(password),
     guessable: password.length > 0 && !GUESSABLE.some((word) => lower.includes(word)),
-    unique: password.length > 0 && password !== PREVIOUS_PASSWORD,
+    unique: password.length > 0,
   }
 }
 
@@ -26,11 +25,11 @@ const RULES = [
 ]
 
 export default function SetPasswordPage() {
-  const { signedIn, t, leaveApp } = useApp()
+  const { signedIn, t, leaveApp, language } = useApp()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [succeeded, setSucceeded] = useState(false)
+  const [succeeded] = useState(false)
   const rules = useMemo(() => ruleState(password), [password])
   const ready = Object.values(rules).every(Boolean) && password === confirm && confirm.length > 0
   const mismatch = confirm.length > 0 && password !== confirm
@@ -74,12 +73,13 @@ export default function SetPasswordPage() {
         </span>
         <h1 className="text-center text-display-sm font-semibold tracking-[-0.02em] text-text-primary">{t('pwdTitle')}</h1>
         <p className="mt-2 text-center text-md text-text-tertiary">{t('pwdBody')}</p>
+        <p role="status" className="mt-3 text-center text-sm text-text-secondary">{language === 'ar' ? 'يتم تغيير كلمة المرور من خلال SAP IAS. هذه الشاشة للعرض فقط حالياً.' : 'Password changes are managed through SAP IAS. This form is currently read-only.'}</p>
 
         <form
           className="mt-8 flex flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault()
-            if (ready) setSucceeded(true)
+            // No IAS password-management endpoint exists in this portal. Never simulate success.
           }}
         >
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
@@ -87,6 +87,7 @@ export default function SetPasswordPage() {
             <input
               type="password"
               autoComplete="new-password"
+              readOnly
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="h-11 rounded-lg border border-border bg-white px-3 text-sm shadow-xs outline-none focus:border-[#717bbc]"
@@ -97,6 +98,7 @@ export default function SetPasswordPage() {
             <input
               type="password"
               autoComplete="new-password"
+              readOnly
               value={confirm}
               onChange={(event) => setConfirm(event.target.value)}
               className="h-11 rounded-lg border border-border bg-white px-3 text-sm shadow-xs outline-none focus:border-[#717bbc]"
@@ -115,7 +117,7 @@ export default function SetPasswordPage() {
 
           <button
             type="submit"
-            disabled={!ready}
+            disabled
             className={`mt-2 h-11 rounded-lg text-sm font-semibold ${
               ready ? 'bg-brand text-white' : 'cursor-not-allowed bg-[#f2f4f7] text-text-placeholder'
             }`}

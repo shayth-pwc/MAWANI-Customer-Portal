@@ -22,8 +22,7 @@ export default function TopBar({ title, supporting, showHeader = true, onToggleM
 
   const signOut = () => {
     setPanel(null)
-    navigate('/signed-out')
-    leaveApp()
+    leaveApp() // SAP App Router central logout, not just local React state
   }
 
   const filtered = useMemo(() => {

@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.cdsrc-private.json
+*.log
+coverage/
+gen/
+mta_archives/
+.DS_Store
+
+# Local router service credentials must never be committed
+.deploy/app-router/default-env.json
