@@ -24,6 +24,7 @@ export default function AppLayout() {
   const { signedIn, t, setContactOpen, language } = useApp()
   const { pathname } = useLocation()
   const adminUserPage = pathname === '/user-management'
+  const dynamicListsPage = pathname === '/dynamic-lists'
   const [collapsed, setCollapsed] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
@@ -55,8 +56,8 @@ export default function AppLayout() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
-          title={adminUserPage ? (language === 'ar' ? 'إدارة المستخدمين' : 'User Management') : t(meta.titleKey)}
-          supporting={adminUserPage ? (language === 'ar' ? 'إدارة حسابات SAP IAS' : 'Manage SAP IAS accounts') : (meta.supportingKey ? t(meta.supportingKey) : '')}
+          title={dynamicListsPage ? (language === 'ar' ? 'القوائم الديناميكية' : 'Dynamic Lists') : adminUserPage ? (language === 'ar' ? 'إدارة المستخدمين' : 'User Management') : t(meta.titleKey)}
+          supporting={dynamicListsPage ? (language === 'ar' ? 'إدارة قوائم التطبيق' : 'Manage application dropdown options') : adminUserPage ? (language === 'ar' ? 'إدارة حسابات SAP IAS' : 'Manage SAP IAS accounts') : (meta.supportingKey ? t(meta.supportingKey) : '')}
           showHeader={!pageOwnsTitle}
           onToggleMenu={() => setMobileOpen(true)}
           panel={panel}

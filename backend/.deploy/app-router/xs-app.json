@@ -21,6 +21,22 @@
       "cacheControl": "no-store"
     },
     {
+      "source": "^/admin-lists/(.*)$",
+      "target": "/admin-lists/$1",
+      "destination": "srv-api",
+      "authenticationType": "ias",
+      "csrfProtection": true,
+      "cacheControl": "no-store"
+    },
+    {
+      "source": "^/lists/(.*)$",
+      "target": "/lists/$1",
+      "destination": "srv-api",
+      "authenticationType": "ias",
+      "csrfProtection": true,
+      "cacheControl": "no-store"
+    },
+    {
       "source": "^/assets/(.*)$",
       "target": "assets/$1",
       "localDir": "portal-bootstrap",

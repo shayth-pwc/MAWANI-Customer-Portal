@@ -18,6 +18,7 @@ import SurveysPage from '../pages/SurveysPage'
 import RequestsPage from '../pages/RequestsPage'
 import SettingsPage from '../pages/SettingsPage'
 import AdminUsersPage from '../pages/admin/AdminUsersPage'
+import AdminListsPage from '../pages/admin/AdminListsPage'
 import AuthPage from '../pages/AuthPage'
 import RequirePortalSession from '../components/auth/RequirePortalSession'
 import RegisterPage from '../pages/RegisterPage'
@@ -55,6 +56,7 @@ export default function AppRoutes() {
         <Route path="support" element={<SupportPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="user-management" element={<AdminUsersPage />} />
+        <Route path="dynamic-lists" element={<AdminListsPage />} />
         <Route path="home" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

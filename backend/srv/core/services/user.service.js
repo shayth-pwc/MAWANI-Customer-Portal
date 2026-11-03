@@ -82,7 +82,7 @@ class UserService {
   async applyVerifiedIasChange(rawUser, fields, req, auditAction) {
     const { text, email } = require('../utils/validation');
     const iasId = text(rawUser?.id, 'IAS user ID', { max: 150, required: true });
-    const allowed = new Set(['email', 'givenName', 'familyName', 'active']);
+    const allowed = new Set(['email', 'givenName', 'familyName', 'active', 'mobile']);
     if (!Array.isArray(fields) || !fields.length || fields.some(field => !allowed.has(field)))
       throw new AppError(400, 'Invalid IAS synchronization field selection');
     const changes = {};
@@ -94,6 +94,10 @@ class UserService {
       'IAS givenName', { max: 100, required: true });
     if (fields.includes('familyName')) changes.LNAME = text(rawUser.name?.familyName,
       'IAS familyName', { max: 100, required: true });
+    if (fields.includes('mobile')) {
+      const number = rawUser.phoneNumbers?.find(p => p?.type === 'mobile')?.value;
+      changes.MOBILE_NUMBER = text(number, 'IAS mobile', { max: 25, required: true });
+    }
     if (fields.includes('active')) {
       if (typeof rawUser.active !== 'boolean') throw new AppError(502, 'IAS status missing');
       changes.ACTIVE_STATUS = rawUser.active;
@@ -107,6 +111,11 @@ class UserService {
       if (!profile) {
         profile = await this.users.createFromAdministrativeIas(rawUser, tx);
         created = true;
+        // Administrative IAS provisioning creates name/email/status. Apply
+        // the separately-verified mobile in this same transaction when present.
+        if (Object.hasOwn(changes, 'MOBILE_NUMBER'))
+          profile = await this.users.updateVerifiedIasFields(profile.UUID,
+            { MOBILE_NUMBER: changes.MOBILE_NUMBER }, tx);
         await this.audit.record(req, 'PORTAL_USER_ADMIN_CREATE', 'BTP_TBL_USERS', profile.UUID,
           'SUCCESS', 'Created missing profile while reconciling verified IAS state', tx);
       } else {
