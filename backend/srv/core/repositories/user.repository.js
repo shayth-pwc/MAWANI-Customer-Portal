@@ -68,7 +68,7 @@ class UserRepository {
    * fields and token identity linkage are never changed here.
    */
   async updateVerifiedIasFields(uuid, changes, tx) {
-    const allowed = { EMAIL: 254, FNAME: 100, LNAME: 100, ACTIVE_STATUS: 0 };
+    const allowed = { EMAIL: 254, FNAME: 100, LNAME: 100, MOBILE_NUMBER: 25, ACTIVE_STATUS: 0 };
     const keys = Object.keys(changes);
     if (!keys.length || keys.some(key => !Object.hasOwn(allowed, key)))
       throw new AppError(400, 'No permitted IAS synchronization fields supplied');

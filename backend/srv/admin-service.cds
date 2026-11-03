@@ -26,8 +26,27 @@ service AdminService {
     displayName : String;
     email       : String;
     active      : Boolean;
+    // Safe, admin-visible SCIM profile fields; never expose password hashes.
+    givenName   : String;
+    familyName  : String;
+    middleName  : String;
+    mobile      : String;
+    title       : String;
+    locale      : String;
+    timezone    : String;
+    preferredLanguage : String;
+    externalId  : String;
+    userType    : String;
+    nickName    : String;
+    groupsSummary: String;
+    addressesSummary: String;
+    organization: String;
+    department  : String;
+    created     : String;
+    lastModified: String;
     portalUserUuid : UUID; // populated on createIasUser only
     portalCreated  : Boolean; // populated on createIasUser only
+    groupIds : array of String;
   }
   type IasUserPage {
     totalResults : Integer;
@@ -35,6 +54,18 @@ service AdminService {
     startIndex   : Integer;
     users        : array of IasUser;
   }
+
+  type IasMembershipResult {
+  userId   : String;
+  groupId  : String;
+  assigned : Boolean;
+}
+
+action setIasUserGroupMembership(
+  userId: String,
+  groupId: String,
+  assigned: Boolean
+) returns IasMembershipResult;
 
   type PortalSyncResult {
     profile : PortalUser;
@@ -45,6 +76,7 @@ service AdminService {
     id          : String;
     displayName : String;
     externalId  : String;
+    manageable : Boolean;
   }
   type IasGroupPage {
     totalResults : Integer;
@@ -85,7 +117,14 @@ service AdminService {
   // Unlike the create-only sync, this applies current IAS name/email/status.
   action reconcileIasUserToPortal(id: String) returns PortalSyncResult;
   action updateIasUser(
-    id: String, email: String, givenName: String, familyName: String
+    id: String, email: String, givenName: String, familyName: String,
+    mobile: String, title: String, locale: String, timezone: String,
+    preferredLanguage: String
   ) returns IasUser;
+  type PasswordResetResult {
+    accepted: Boolean;
+    message: String;
+  }
+  action requestIasPasswordReset(id: String) returns PasswordResetResult;
   action setIasUserActive(id: String, active: Boolean) returns IasUser;
 }

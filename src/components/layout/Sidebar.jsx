@@ -156,6 +156,17 @@ export default function Sidebar({
                 )}
               </NavLink>
             ) : null}
+                      {adminAccess === 'allowed' ? (
+              <NavLink
+                to="/dynamic-lists"
+                title={language === 'ar' ? '\u0627\u0644\u0642\u0648\u0627\u0626\u0645 \u0627\u0644\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a\u0629' : 'Dynamic Lists'}
+                onClick={closeMobile}
+                className={({ isActive }) => `relative flex h-10 items-center gap-3 rounded-lg text-sm font-semibold ${isActive ? 'bg-bg-active text-brand' : 'text-text-secondary hover:bg-bg-neutral'} ${showLabels ? 'px-3' : 'w-10 justify-center'}`}
+              >
+                <Icon name="clipboard" size={20} />
+                {showLabels ? <span className="truncate">{language === 'ar' ? '\u0627\u0644\u0642\u0648\u0627\u0626\u0645 \u0627\u0644\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a\u0629' : 'Dynamic Lists'}</span> : <span className="sr-only">Dynamic Lists</span>}
+              </NavLink>
+            ) : null}
           </nav>
         </div>
 
