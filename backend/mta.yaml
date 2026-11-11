@@ -36,6 +36,8 @@ modules:
         - '*.p12'
     requires:
       - name: mawani-postgres
+      - name: mawani-license-destination
+      - name: mawani-destination-auth
       - name: mawani-ias
         parameters:
           config:
@@ -76,6 +78,13 @@ modules:
           strictSSL: true
 
 resources:
+  # Use an EXISTING Destination service instance. Replace the placeholder with
+  # its CF instance name after `cf services` and platform-owner approval.
+  # C4C_DES is a destination *configuration name*, not an instance name.
+  - name: mawani-license-destination
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: mawani-destination
   - name: mawani-postgres
     type: org.cloudfoundry.existing-service
     parameters:
@@ -83,4 +92,8 @@ resources:
   - name: mawani-ias
     type: org.cloudfoundry.existing-service
     parameters:
-      service-name: CIS-app-Inst
+     service-name: CIS-app-Inst
+  - name: mawani-destination-auth
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: XSUAA-dev-INST

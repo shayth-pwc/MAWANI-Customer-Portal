@@ -1,5 +1,7 @@
 # MAWANI Customer Portal
 
+> **License branch audit (2026-11-04):** See [backend/docs/LICENSES_BRANCH_AUDIT.md](backend/docs/LICENSES_BRANCH_AUDIT.md) for confirmed fixes, C4C/CR authorization gaps and required DEV validation. Do not deploy the license actions until those prerequisites are resolved.
+
 **Developer guide — React frontend, SAP CAP backend, SAP IAS, PostgreSQL and SAP BTP Cloud Foundry**  
 **Baseline:** Phase 2 DEV integration, SAP CAP backend `0.7.4`  
 **Repository:** https://github.com/shayth-pwc/MAWANI-Customer-Portal
