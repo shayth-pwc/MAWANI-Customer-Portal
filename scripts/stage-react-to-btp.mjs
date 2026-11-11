@@ -56,7 +56,9 @@ try {
       config.routes?.[1]?.source !== '^/(profile|admin)(/.*)?$' ||
       config.routes?.[1]?.destination !== 'srv-api' ||
       config.routes?.[1]?.authenticationType !== 'ias' ||
-      config.routes?.[1]?.csrfProtection !== true) {
+      config.routes?.[1]?.csrfProtection !== true ||
+      !config.routes?.some(route => route.source === '^/licenses-api/(.*)$' && route.destination === 'srv-api' &&
+        route.authenticationType === 'ias' && route.csrfProtection === true)) {
     fail('Router config is missing IAS/API/CSRF safeguards.')
   }
   const originalRouterConfig = JSON.parse(fs.readFileSync(path.join(router, 'xs-app.json'), 'utf8'))

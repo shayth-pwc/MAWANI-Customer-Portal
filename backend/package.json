@@ -17,12 +17,14 @@
     "check:ias:groups": "node scripts/ias-groups.js",
     "check:provisioning": "node scripts/provisioning-preflight.js",
     "check:admin:audit": "node scripts/admin-audit-verify.js",
-    "diagnose:provisioning": "node scripts/provisioning-diagnose.js"
+    "diagnose:provisioning": "node scripts/provisioning-diagnose.js",
+    "check:c4c:binding": "node scripts/check-c4c-binding.js"
   },
   "dependencies": {
     "@sap/cds": "^10",
     "@cap-js/postgres": "^3",
-    "@sap/xssec": "^4"
+    "@sap/xssec": "^4",
+    "@sap-cloud-sdk/http-client": "^4.9.1"
   },
   "devDependencies": {
     "@sap/cds-dk": "^10"
