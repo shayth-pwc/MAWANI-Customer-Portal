@@ -51,7 +51,8 @@ function fakeOperations() {
   };
 }
 function fixture({ accounts = [{ AccountID: '10001', RoleCode: 'TEST03', LicenseNumber_KUT: '' }],
-    quotes = [], operation = fakeOperations(), writerOverrides = {}, configOverrides = {} } = {}) {
+    quotes = [], operation = fakeOperations(), writerOverrides = {}, configOverrides = {},
+    expectedPriceTypes = ['TEST03'] } = {}) {
   const calls = [];
   const writer = {
     async createAccount(_cr, _input, type) { calls.push(['account', type]); return { accountID: '10002' }; },
@@ -72,7 +73,11 @@ function fixture({ accounts = [{ AccountID: '10001', RoleCode: 'TEST03', License
     crs: { async requireOwned(id) { assert.equal(id, 'user-uuid'); return cr(); } },
     c4c, writer,
     operations: operation,
-    pricing: { async quote(services) { assert.deepEqual(services, ['ZSA011']); return { currency: 'SAR', totalHalalas: '325000' }; } },
+    pricing: { async quote(licenseTypes) {
+      assert.deepEqual(licenseTypes, expectedPriceTypes);
+      const prices = { TEST03: 325000, NEXT01: 100000 };
+      return { currency: 'SAR', totalHalalas: String(licenseTypes.reduce((sum, code) => sum + prices[code], 0)) };
+    } },
     getEnabledKeys: async () => new Set(['TEST03','ZSA011','INV1','NEXT01']),
     config: { ...config, ...configOverrides }
   });
@@ -182,7 +187,7 @@ test('failed or ambiguous quote POST remains UNCERTAIN and is not retried', asyn
   assert.equal(again.results[0].errorCode, 'SUBMISSION_RECONCILIATION_REQUIRED');
 });
 test('comprehensive license requests create one quote per distinct license type', async () => {
-  const ctx = fixture({ accounts: [
+  const ctx = fixture({ expectedPriceTypes: ['TEST03', 'NEXT01'], accounts: [
     { AccountID: '10001', RoleCode: 'TEST03', LicenseNumber_KUT: '' },
     { AccountID: '10002', RoleCode: 'NEXT01', LicenseNumber_KUT: '' }
   ] });

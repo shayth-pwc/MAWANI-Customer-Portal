@@ -183,6 +183,37 @@ module.exports = cds.service.impl(function () {
       return safeReject(req, error);
     }
   });
+
+this.on('preflightLicenseSubmission', async req => {
+  try {
+    ensureTrusted(req);
+
+    const actor = await getActor(req);
+    const lists = await cds.connect.to('ListService');
+
+    const definition = parseDefinition(
+      await lists.send('getList', {
+        app: LIST_APP,
+        code: 'LICENSE_TYPE'
+      }),
+      'LICENSE_TYPE',
+      LIST_APP
+    );
+
+    const preflight = createLicensePreflight({
+      crs: createCrRepository(await db()),
+      c4c: getC4c(),
+      allowedLicenseTypes: enabledKeys(definition)
+    });
+
+    return await preflight.check(actor.UUID, req.data);
+
+  } catch (error) {
+    return safeReject(req, error);
+  }
+});
+
+
   // NEW license writes: all authorization and price checks are repeated server-side.
   // Configuration defaults to fail-closed; operation reservation commits before each C4C POST.
   this.on("submitLicense", async (req) => {
