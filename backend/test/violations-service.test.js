@@ -49,6 +49,33 @@ test('violations are scoped to authenticated CRs and enriched with the existing 
   assert.equal(rows[0].ProcessingTypeCode_UICOLORSTATUS, 'Warning');
 });
 
+test('reference list reads are serialized for CAP request-scoped PostgreSQL clients', async () => {
+  let active = 0;
+  let maxActive = 0;
+  // Replace the service with a loader that detects overlapping calls. A real
+  // ListService inherits the same request-scoped pg client as ViolationsService.
+  const definitions = {
+    PORTS: definition('PORTS', [item('JED', 'Jeddah', 'جدة')]),
+    FINE_STATUS: definition('FINE_STATUS', [item('NOT_PAID', 'Not Paid', 'غير مدفوعة')]),
+    LICENSE_TYPE: definition('LICENSE_TYPE', [item('ZSA010', 'Ship Supplier', 'مورد سفن')]),
+    FINE_TYPE: definition('FINE_TYPE', [item('FINE', 'Fine', 'مخالفة')]),
+    REQUEST_STATUS: definition('REQUEST_STATUS', [item('OPEN', 'Open', 'مفتوح')])
+  };
+  const serialApi = createViolationsService({
+    crs: { listForUser: async () => [CR] },
+    c4c: { customerOrdersForCr: async () => [fine] },
+    loadList: async code => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await new Promise(resolve => setImmediate(resolve));
+      active--;
+      return definitions[code];
+    }
+  });
+  await serialApi.getMyFines(USER);
+  assert.equal(maxActive, 1);
+});
+
 test('a fine by ID is not leaked when it is outside the authenticated CR scope', async () => {
   const api = makeService({ customerOrderById: async () => [{ ...fine, CRNationalNumber_KUT: 'OTHER' }] });
   assert.deepEqual(await api.getFineById(USER, fine.ID), []);

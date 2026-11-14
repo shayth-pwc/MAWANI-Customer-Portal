@@ -53,6 +53,14 @@
       "cacheControl": "no-store"
     },
     {
+      "source": "^/violations/(.*)$",
+      "target": "/violations/$1",
+      "destination": "srv-api",
+      "authenticationType": "ias",
+      "csrfProtection": true,
+      "cacheControl": "no-store"
+    },
+    {
       "source": "^/assets/(.*)$",
       "target": "assets/$1",
       "localDir": "portal-bootstrap",
