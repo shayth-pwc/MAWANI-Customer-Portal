@@ -90,7 +90,16 @@ function createViolationsService({ crs, c4c, loadList }) {
     // The pg client permits one query at a time, so concurrent ListService
     // requests can fail with "client is already executing a query".
     const result = {};
-    for (const code of LIST_CODES) result[code] = listMap(await loadList(code));
+    for (const code of LIST_CODES) {
+      try {
+        result[code] = listMap(await loadList(code));
+      } catch (_) {
+        // The original XSJS implementation treated a missing parent-data row
+        // as an empty lookup. These lists add translated labels and UI states;
+        // they must not prevent an authorized user from seeing C4C violations.
+        result[code] = new Map();
+      }
+    }
     return result;
   }
 
