@@ -86,8 +86,12 @@ function createViolationsService({ crs, c4c, loadList }) {
   if (!crs || !c4c || typeof loadList !== 'function') throw new TypeError('Violations dependencies are required');
 
   async function lists() {
-    const definitions = await Promise.all(LIST_CODES.map(code => loadList(code)));
-    return Object.fromEntries(LIST_CODES.map((code, index) => [code, listMap(definitions[index])]));
+    // Local CAP service calls inherit the current PostgreSQL request context.
+    // The pg client permits one query at a time, so concurrent ListService
+    // requests can fail with "client is already executing a query".
+    const result = {};
+    for (const code of LIST_CODES) result[code] = listMap(await loadList(code));
+    return result;
   }
 
   async function scopedFines(userUuid) {
