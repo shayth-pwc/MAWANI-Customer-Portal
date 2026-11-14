@@ -154,6 +154,19 @@ export async function submitLicenseRequest(payload, fetcher = fetch) {
     );
   }
 }
+export async function renewLicenseRequest(payload, fetcher = fetch) {
+  const result = await request("renewLicense", {
+    body: { payload: JSON.stringify(payload) },
+    fetcher,
+  });
+  if (typeof result !== "string")
+    throw new LicenseApiError("Invalid license renewal response");
+  try {
+    return JSON.parse(result);
+  } catch {
+    throw new LicenseApiError("Invalid renewal result; check C4C before retrying");
+  }
+}
 export async function fileToC4cAttachment(file) {
   if (
     !(file instanceof File) ||

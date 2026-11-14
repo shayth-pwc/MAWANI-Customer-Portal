@@ -196,6 +196,26 @@ function parseSubmission(raw) {
   };
 }
 
+function parseRenewalSubmission(raw) {
+  if (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) invalid('Invalid renewal payload size');
+  let value;
+  try { value = JSON.parse(raw); } catch { invalid('Renewal payload is not valid JSON'); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) invalid('Invalid renewal payload');
+  const accountId = required(value.accountId, 'C4C account ID', 80);
+  if (!/^[A-Za-z0-9_-]+$/.test(accountId)) invalid('Invalid C4C account ID');
+  const licenseNumber = required(value.licenseNumber, 'License number', 80);
+  const licenseType = code(value.licenseType, 'license type');
+  // Reuse the same strict applicant, attachment, address, and idempotency
+  // validation as new-license submission without inventing a renewal service type.
+  const normalized = parseSubmission(JSON.stringify({
+    ...value,
+    licenseTypes: [licenseType],
+    serviceTypes: ['RENEW'],
+    investorType: 'RENEW',
+  }));
+  return { ...normalized, accountId, licenseNumber, licenseType };
+}
+
 function assertCommercialRegistration(cr, allowedStatuses) {
   if (cr?.IS_TEST_DATA !== false)
     throw new LicenseError(
@@ -249,6 +269,7 @@ function assertCommercialRegistration(cr, allowedStatuses) {
 
 module.exports = {
   parseSubmission,
+  parseRenewalSubmission,
   assertCommercialRegistration,
   MAX_FILE_BYTES,
 };

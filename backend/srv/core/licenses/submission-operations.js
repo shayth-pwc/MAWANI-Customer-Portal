@@ -85,6 +85,29 @@ function createSubmissionOperations(db) {
       );
     return id;
   }
+  async function claimRenewal(identity, input, licenseType, hash) {
+    const id = randomUUID();
+    const rows = await committed((tx) =>
+      tx.run(
+        `WITH claimed AS (
+      INSERT INTO ${TABLE}
+      ("ID", "IAS_ISSUER", "IAS_SUBJECT", "CR_NATIONAL_NUMBER", "CR_NUMBER",
+       "CLIENT_REQUEST_ID", "LICENSE_TYPE", "OPERATION_KIND", "REQUEST_SHA256", "STATUS", "STAGE")
+      VALUES ($1::uuid, $2::text, $3::text, $4::text, $5::text,
+              $6::uuid, $7::text, 'RENEW', $8::text, 'PENDING', 'RESERVED')
+      ON CONFLICT DO NOTHING RETURNING "ID"
+    ) SELECT "ID" FROM claimed`,
+        [id, identity.issuer, identity.subject, input.crNationalNumber, input.crNumber,
+          input.clientRequestId, licenseType, hash],
+      ),
+    );
+    if (!Array.isArray(rows)) throw new LicenseError('OPERATIONS_UNAVAILABLE', 'Operation tracking unavailable', 503);
+    if (rows.length !== 1) {
+      throw new LicenseError('DUPLICATE_RENEWAL_REQUEST',
+        'This license renewal is already recorded; reconcile before retrying', 409);
+    }
+    return id;
+  }
   async function mark(id, options) {
     const row = {
       status: options.status || null,
@@ -136,6 +159,6 @@ function createSubmissionOperations(db) {
       );
     }
   }
-  return { find, claim, mark };
+  return { find, claim, claimRenewal, mark };
 }
 module.exports = { createSubmissionOperations, payloadHash };
