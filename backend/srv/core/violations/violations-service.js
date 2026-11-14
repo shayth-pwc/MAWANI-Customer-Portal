@@ -95,11 +95,16 @@ function createViolationsService({ crs, c4c, loadList }) {
   }
 
   async function scopedFines(userUuid) {
-    const registrations = await crs.listForUser(userUuid);
+    let registrations;
+    try { registrations = await crs.listForUser(userUuid); }
+    catch (error) { error.violationsStage = 'cr-scope'; throw error; }
     const knownCrs = new Set(registrations.filter(cr => !cr.IS_TEST_DATA && cr.CR_NATIONAL_NUMBER).map(cr => String(cr.CR_NATIONAL_NUMBER)));
     const byId = new Map();
     for (const national of knownCrs) {
-      for (const fine of await c4c.customerOrdersForCr(national)) {
+      let fines;
+      try { fines = await c4c.customerOrdersForCr(national); }
+      catch (error) { error.violationsStage = 'c4c-fines'; throw error; }
+      for (const fine of fines) {
         if (!fine?.ID || fine.CRNationalNumber_KUT !== national) throw new LicenseError('C4C_SCOPE_MISMATCH', 'Unexpected customer order returned by C4C', 503);
         byId.set(String(fine.ID), fine);
       }
@@ -110,7 +115,9 @@ function createViolationsService({ crs, c4c, loadList }) {
   async function getMyFines(userUuid) {
     const fines = await scopedFines(userUuid);
     if (!fines.length) return [];
-    const reference = await lists();
+    let reference;
+    try { reference = await lists(); }
+    catch (error) { error.violationsStage = 'reference-lists'; throw error; }
     return fines.map(fine => mapFine(fine, reference));
   }
 
