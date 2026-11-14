@@ -1,0 +1,27 @@
+@baseUrl = https://mawani-btp-dev-mawani-btp-dev-sp-mawani-portal-router.cfapps.sa30.hana.ondemand.com
+# Paste a current IAS access token here. Do not commit a real token.
+@accessToken = REPLACE_WITH_IAS_ACCESS_TOKEN
+
+# Replace this with an ID returned by getMyVisits().
+@visitId = REPLACE_WITH_VISIT_ID
+
+### Service metadata
+GET {{baseUrl}}/visits/$metadata
+Authorization: Bearer {{accessToken}}
+Accept: application/xml
+
+### My completed visits (legacy C4C Status = 3)
+# @name myVisits
+GET {{baseUrl}}/visits/getMyVisits()
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### One visit, scoped to the signed-in user's commercial registrations
+GET {{baseUrl}}/visits/getVisitById(visitId='{{visitId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Attachments for one scoped visit
+GET {{baseUrl}}/visits/getVisitAttachments(visitId='{{visitId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
