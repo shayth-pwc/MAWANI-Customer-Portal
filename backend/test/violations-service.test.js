@@ -76,6 +76,19 @@ test('reference list reads are serialized for CAP request-scoped PostgreSQL clie
   assert.equal(maxActive, 1);
 });
 
+test('unavailable optional display lists do not hide authorized C4C violations', async () => {
+  const api = createViolationsService({
+    crs: { listForUser: async () => [CR] },
+    c4c: { customerOrdersForCr: async () => [fine] },
+    loadList: async () => { throw new Error('optional list unavailable'); }
+  });
+  const rows = await api.getMyFines(USER);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].ID, fine.ID);
+  assert.equal(rows[0].BTP_FInestatus_KUT, 'NOT_PAID');
+  assert.equal(rows[0].BTP_FInestatus_KUTText, undefined);
+});
+
 test('a fine by ID is not leaked when it is outside the authenticated CR scope', async () => {
   const api = makeService({ customerOrderById: async () => [{ ...fine, CRNationalNumber_KUT: 'OTHER' }] });
   assert.deepEqual(await api.getFineById(USER, fine.ID), []);
