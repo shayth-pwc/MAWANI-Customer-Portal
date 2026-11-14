@@ -172,7 +172,7 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
   }
 
   async function get(collection, filter, limit = 10) {
-    if (!['CorporateAccountCollection', 'ContactCollection'].includes(collection)) {
+    if (!['CorporateAccountCollection', 'ContactCollection', 'SalesQuoteCollection'].includes(collection)) {
       throw new TypeError('Unapproved C4C read collection');
     }
     const url = `${ROOT}${collection}?$filter=${encodeURIComponent(filter)}` +
@@ -188,8 +188,10 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
       throw new LicenseError('C4C_READ_FAILED', 'C4C reconciliation lookup failed', 503);
     }
     const values = collectionFromResponse(response);
-    if (!values || values.length > limit || values.some(row => !isRecord(row))) {
-      throw new LicenseError('C4C_SCOPE_MISMATCH', 'Unexpected C4C lookup response', 503);
+    const data = response?.data?.d ?? response?.data;
+    if (!values || values.length > limit || values.some(row => !isRecord(row)) ||
+        (collection === 'SalesQuoteCollection' && (data?.__next || data?.['@odata.nextLink']))) {
+      throw new LicenseError('C4C_SCOPE_MISMATCH', 'Unexpected or incomplete C4C lookup response', 503);
     }
     return values;
   }
@@ -253,17 +255,61 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
     return { contactID: str(row.ContactID, 120), objectID: str(row.ObjectID, 120) };
   }
 
+  async function findCreatedQuote(accountID, licenseType, payload, postRow) {
+    // Called ONLY after a confirmed HTTP 200/201 SalesQuoteCollection POST with
+    // missing identifiers. Never repeat the POST or adopt the first quote found.
+    const uncertain = () => new LicenseError('C4C_WRITE_UNCERTAIN',
+      'C4C Sales Quote was submitted but could not be uniquely verified; reconcile before retrying', 503);
+    const filter = `BuyerPartyID eq ${odataString(accountID)} and ` +
+      `LicenceType_KUT eq ${odataString(licenseType)}`;
+    let rows;
+    try {
+      // Request two records so duplicates remain visible (never use $top=1).
+      rows = await get('SalesQuoteCollection', filter, 2);
+    } catch (_error) {
+      // Preserve UNCERTAIN semantics after a successful write, even if GET fails.
+      throw uncertain();
+    }
+    if (rows.length !== 1) throw uncertain();
+    const row = rows[0];
+    const quoteID = str(row.ID, 120);
+    const quoteObjectID = str(row.ObjectID, 120);
+    if (!quoteID || !quoteObjectID) throw uncertain();
+
+    // Verify business scope AND specific submitted fields. Merely matching the
+    // same account and licence type is not sufficient to associate a quote.
+    const requiredFields = [
+      'BuyerPartyID', 'LicenceType_KUT', 'Type1_KUT',
+      'RequestType_KUT', 'ZAPPLICANT_ID_KUT'
+    ];
+    if (requiredFields.some(field =>
+      !str(payload[field]) || str(row[field]) !== str(payload[field]))) {
+      throw uncertain();
+    }
+    // Verify additional fields when present on the returned entity.
+    for (const field of ['SalesOrganisationID', 'SalesUnitPartyID', 'Port3_KUT']) {
+      if (str(payload[field]) && str(row[field]) &&
+          str(row[field]) !== str(payload[field])) throw uncertain();
+    }
+    // Port-specific services require an exact port match, not a missing value.
+    if (str(payload.Type1_KUT) === '111' &&
+        str(row.Port3_KUT) !== str(payload.Port3_KUT)) throw uncertain();
+    // If C4C returned even one identifier, it MUST agree with read-back.
+    if ((str(postRow?.ID) && str(postRow.ID) !== quoteID) ||
+        (str(postRow?.ObjectID) && str(postRow.ObjectID) !== quoteObjectID)) {
+      throw uncertain();
+    }
+    return { quoteID, quoteObjectID };
+  }
+
   async function createQuote(accountID, licenseType, input, config) {
-    const response = await post('SalesQuoteCollection',
-      buildQuotePayload(accountID, licenseType, input, config));
+    const payload = buildQuotePayload(accountID, licenseType, input, config);
+    const response = await post('SalesQuoteCollection', payload);
     const row = entityFromResponse(response);
     const quoteID = str(row?.ID, 120);
     const quoteObjectID = str(row?.ObjectID, 120);
-    if (!quoteID || !quoteObjectID) {
-      throw new LicenseError('C4C_WRITE_UNCERTAIN',
-        'C4C Sales Quote response lacks ID or ObjectID; reconcile before retrying', 503);
-    }
-    return { quoteID, quoteObjectID };
+    if (quoteID && quoteObjectID) return { quoteID, quoteObjectID };
+    return findCreatedQuote(accountID, licenseType, payload, row);
   }
 
   async function uploadAttachment(quote, file) {
