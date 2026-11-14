@@ -1,0 +1,61 @@
+@baseUrl = https://mawani-btp-dev-mawani-btp-dev-sp-mawani-portal-router.cfapps.sa30.hana.ondemand.com
+# Paste a current IAS access token here. Do not commit a real token.
+@accessToken = REPLACE_WITH_IAS_ACCESS_TOKEN
+
+# Replace these with IDs returned by the requests below.
+@fineId = 9000003843
+@requestId = REPLACE_WITH_OBJECTION_REQUEST_ID
+
+### Service metadata
+GET {{baseUrl}}/violations/$metadata
+Authorization: Bearer {{accessToken}}
+Accept: application/xml
+
+### My violations
+# @name myFines
+GET {{baseUrl}}/violations/getMyFines()
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### One violation, scoped to the signed-in user's commercial registrations
+GET {{baseUrl}}/violations/getFineById(fineId='{{fineId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### My objection requests
+# @name objectionRequests
+GET {{baseUrl}}/violations/getMyObjectionRequests()
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Attachments already on one violation
+GET {{baseUrl}}/violations/getFineAttachments(fineId='{{fineId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Attachments on one objection request
+GET {{baseUrl}}/violations/getObjectionAttachments(requestId='{{requestId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Fetch a CSRF token before the state-changing request
+# @name csrf
+GET {{baseUrl}}/violations/
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: Fetch
+Accept: application/json
+
+@csrfToken = {{csrf.response.headers.x-csrf-token}}
+
+### Submit an objection without new attachments
+# The selected fine must belong to the signed-in user, have an open objection
+# period, and have no other open objection. This request creates a C4C record.
+POST {{baseUrl}}/violations/submitObjection
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: {{csrfToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "payload": "{\"fineId\":\"{{fineId}}\",\"attachments\":[]}"
+}
