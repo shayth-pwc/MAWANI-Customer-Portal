@@ -107,6 +107,24 @@ export async function getMyRequests(fetcher = fetch) {
     throw new LicenseApiError("Invalid requests response");
   return result;
 }
+export async function getLicenseAttachments(accountId, fetcher = fetch) {
+  const result = await request(
+    `getLicenseAttachments(accountId=${odataStringLiteral(String(accountId))})`,
+    { fetcher },
+  );
+  if (!Array.isArray(result))
+    throw new LicenseApiError("Invalid license attachments response");
+  return result;
+}
+export async function getRequestAttachments(requestId, fetcher = fetch) {
+  const result = await request(
+    `getRequestAttachments(requestId=${odataStringLiteral(String(requestId))})`,
+    { fetcher },
+  );
+  if (!Array.isArray(result))
+    throw new LicenseApiError("Invalid license request attachments response");
+  return result;
+}
 export const getC4cConnection = (fetcher = fetch) =>
   request("checkC4cConnection()", { fetcher });
 export async function getServicePrices(fetcher = fetch) {

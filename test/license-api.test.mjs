@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getServicePrices, getServiceQuote, submitLicenseRequest } from '../src/services/licensesApi.js'
+import { getLicenseAttachments, getRequestAttachments, getServicePrices, getServiceQuote, submitLicenseRequest } from '../src/services/licensesApi.js'
 const json = value => ({ ok: true, status: 200, headers: { get: name => name === 'content-type' ? 'application/json' : name === 'x-csrf-token' ? 'valid-token' : null }, json: async () => value })
 test('service prices are read through authenticated same-origin license route', async () => {
   const calls = []
@@ -34,4 +34,15 @@ test('unknown POST outcome does not automatically resend', async () => {
     throw new Error('network lost')
   }), error => error.uncertain && /do not resubmit/i.test(error.message))
   assert.equal(calls.length,2)
+})
+test('attachment reads use the scoped license and request endpoints', async () => {
+  const calls = []
+  const fetcher = async url => {
+    calls.push(url)
+    return json({ value: [{ Name: 'proof.pdf' }] })
+  }
+  assert.deepEqual(await getLicenseAttachments('A1', fetcher), [{ Name: 'proof.pdf' }])
+  assert.deepEqual(await getRequestAttachments('900', fetcher), [{ Name: 'proof.pdf' }])
+  assert.equal(calls[0], "/licenses-api/getLicenseAttachments(accountId='A1')")
+  assert.equal(calls[1], "/licenses-api/getRequestAttachments(requestId='900')")
 })

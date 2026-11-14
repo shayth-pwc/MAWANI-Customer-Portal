@@ -58,8 +58,14 @@ module.exports = cds.service.impl(function () {
     try {
       const actor = await getActor(req);
       const crs = createCrRepository(await db());
-      const queries = createLicenseQueries({ crs, c4c: getC4c() });
-      return await queries[operation](actor.UUID);
+      const listService = await cds.connect.to('ListService');
+      const queries = createLicenseQueries({
+        crs,
+        c4c: getC4c(),
+        loadList: async code => parseDefinition(
+          await listService.send('getList', { app: LIST_APP, code }), code, LIST_APP)
+      });
+      return await queries[operation](actor.UUID, ...Object.values(req.data || {}));
     } catch (error) {
       return safeReject(req, error);
     }
@@ -96,6 +102,8 @@ module.exports = cds.service.impl(function () {
   });
   this.on("getMyLicenses", (req) => reads(req, "getMyLicenses"));
   this.on("getMyRequests", (req) => reads(req, "getMyRequests"));
+  this.on('getLicenseAttachments', req => reads(req, 'getLicenseAttachments'));
+  this.on('getRequestAttachments', req => reads(req, 'getRequestAttachments'));
   this.on("checkC4cConnection", async (req) => {
     try {
       ensureTrusted(req);
