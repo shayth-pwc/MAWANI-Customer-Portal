@@ -37,7 +37,7 @@ function createC4cClient({ executeHttpRequest }) {
     }
   }
 
-  async function listCollection(entity, filter) {
+  async function listCollection(entity, filter, orderBy = '') {
     if (!['CorporateAccountCollection', 'SalesQuoteCollection'].includes(entity)) {
       throw new TypeError('Unsupported C4C entity');
     }
@@ -50,7 +50,8 @@ function createC4cClient({ executeHttpRequest }) {
         throw new LicenseError('C4C_TOO_MANY_PAGES', 'C4C read exceeds the safe page limit', 503);
       }
       // Always retain the original authorized server-side $filter on every page.
-      const uri = `${entity}?$filter=${encodeURIComponent(filter)}&$top=${PAGE_SIZE}&$format=json${paging}`;
+      const uri = `${entity}?$filter=${encodeURIComponent(filter)}` +
+        `${orderBy ? `&$orderby=${encodeURIComponent(orderBy)}` : ''}&$top=${PAGE_SIZE}&$format=json${paging}`;
       const response = await get(uri);
       const data = response?.data?.d ?? response?.data;
       const batch = data?.results ?? data?.value;
@@ -95,16 +96,30 @@ function createC4cClient({ executeHttpRequest }) {
     return accounts;
   }
 
-  async function findQuotesForAccount(accountID) {
+  async function findQuotesForAccount(accountID, orderBy = '') {
     const account = required(accountID, 'C4C account ID', 80);
     const quotes = await listCollection('SalesQuoteCollection',
-      `BuyerPartyID eq ${odataString(account)}`);
+      `BuyerPartyID eq ${odataString(account)}`, orderBy);
     if (quotes.some(row => row?.BuyerPartyID !== account)) {
       throw new LicenseError('C4C_SCOPE_MISMATCH', 'Unexpected sales quote returned by C4C', 503);
     }
     return quotes;
   }
 
-  return { requestMetadata, findAccountsForCr, findQuotesForAccount };
+  async function salesQuoteAttachments(objectId) {
+    const id = required(objectId, 'C4C Sales Quote object ID', 120);
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) {
+      throw new LicenseError('INVALID_INPUT', 'C4C Sales Quote object ID contains invalid characters', 400);
+    }
+    const response = await get(`SalesQuoteCollection('${id}')/SalesQuoteAttachmentFolder?$format=json`);
+    const data = response?.data?.d ?? response?.data;
+    const rows = data?.results ?? data?.value;
+    if (response?.status !== 200 || !Array.isArray(rows)) {
+      throw new LicenseError('C4C_BAD_RESPONSE', 'Unexpected C4C attachment response', 503);
+    }
+    return rows;
+  }
+
+  return { requestMetadata, findAccountsForCr, findQuotesForAccount, salesQuoteAttachments };
 }
 module.exports = { createC4cClient, DESTINATION, ROOT };

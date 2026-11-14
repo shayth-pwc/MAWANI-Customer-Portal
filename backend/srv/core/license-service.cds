@@ -26,7 +26,16 @@ service LicenseService {
     CommercialRegistrationNumber : String(40);
     CompanyName                  : String(255);
     Port                         : String(80);
+    PortText                     : String(255);
+    PortTextAr                   : String(255);
     Status                       : String(80);
+    LicenseTypeText              : String(255);
+    LicenseTypeTextAr            : String(255);
+    StartDate                    : String(40);
+    ExpiryDate                   : String(40);
+    Amount                       : String(80);
+    QuoteID                      : String(80);
+    QuoteObjectID                : String(120);
   }
 
   type CommercialRegistration {
@@ -54,11 +63,32 @@ service LicenseService {
     ObjectID                     : String(80);
     BuyerPartyID                 : String(80);
     LicenseType                  : String(40);
+    LicenseTypeText              : String(255);
+    LicenseTypeTextAr            : String(255);
     RequestType                  : String(40);
+    ServiceType                  : String(80);
+    ServiceTypeText              : String(255);
+    ServiceTypeTextAr            : String(255);
+    Port                         : String(80);
+    PortText                     : String(255);
+    PortTextAr                   : String(255);
     Status                       : String(80);
     Amount                       : String(80);
+    CreatedAt                    : String(40);
     CRNationalNumber             : String(40);
     CommercialRegistrationNumber : String(40);
+    CompanyName                  : String(255);
+  }
+
+  type Attachment {
+    TypeCode                     : String(40);
+    TypeCodeText                 : String(255);
+    Name                         : String(255);
+    CategoryCode                 : String(40);
+    CategoryCodeText             : String(255);
+    Binary                       : LargeString;
+    MimeType                     : String(100);
+    DocumentLink                 : String(5000);
   }
 
   type ServicePrice {
@@ -85,6 +115,8 @@ service LicenseService {
   function getMyCommercialRegistrations()                      returns many CommercialRegistration;
   function getMyLicenses()                                     returns many LicenseSummary;
   function getMyRequests()                                     returns many RequestSummary;
+  function getLicenseAttachments(accountId: String(80))        returns many Attachment;
+  function getRequestAttachments(requestId: String(80))        returns many Attachment;
 
   function preflightLicenseSubmission(crNationalNumber: String(32),
   crNumber: String(32),

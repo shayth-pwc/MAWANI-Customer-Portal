@@ -134,6 +134,37 @@ function buildQuotePayload(accountID, licenseType, input, config) {
   });
 }
 
+function buildRenewalQuotePayload(accountID, licenseType, input, config) {
+  if (config?.salesOrg !== 'S1600' || config?.salesUnit !== 'S1600') {
+    throw new LicenseError('C4C_RENEWAL_SALES_UNIT_REQUIRED',
+      'Renewal requires the approved S1600 Sales Organisation and Sales Unit', 503);
+  }
+  const today = new Date();
+  const end = new Date(today);
+  end.setFullYear(end.getFullYear() + 3);
+  const date = value => value.toISOString().slice(0, 10) + 'T00:00:00';
+  const applicant = input.applicant;
+  return withoutBlank({
+    BuyerPartyID: accountID,
+    LicenceType_KUT: licenseType,
+    LicenseStartDate_KUT: date(today),
+    LicenseEndDate_KUT: date(end),
+    SalesOrganisationID: 'S1600',
+    SalesUnitPartyID: 'S1600',
+    LicenceRequesterName_KUT: applicant.name.slice(0, 35),
+    ZAPPLICANT_ID_KUT: applicant.id,
+    ZAPPLICANT_ID_TYPE_KUT: DOCUMENT_TYPES[applicant.documentType] || applicant.documentType,
+    ZMOBIL_KUT: applicant.mobile.startsWith('0') ? applicant.mobile : `0${applicant.mobile}`,
+    ZEMAIL_KUT: applicant.email,
+    RequestType_KUT: 'RENEW',
+    ZDISTRICT_KUT: str(input.address?.district, 100),
+    ZSTREET_KUT: str(input.address?.street, 39),
+    ZBUILDING_KUT: str(input.address?.building, 40),
+    ZSECONDARY_NUMBER_KUT: str(input.address?.secondaryNumber, 40),
+    ZPOSTAL_CODE_KUT: str(input.address?.postalCode, 20),
+  });
+}
+
 function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
   if (typeof executeHttpRequest !== 'function') {
     throw new TypeError('SAP Cloud SDK executeHttpRequest client is required');
@@ -169,6 +200,32 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
         'Unexpected C4C write status; reconcile before retrying', 503);
     }
     return response;
+  }
+
+  async function patchAccount(objectID, cr) {
+    const id = str(objectID, 120);
+    if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
+      throw new LicenseError('C4C_ACCOUNT_OBJECT_REQUIRED', 'Renewal account object identifier is unavailable', 503);
+    }
+    const payload = withoutBlank({
+      FullName_KUT: str(cr.CR_NAME_AR || cr.CR_NAME, 255),
+      CRCity_KUT: str(cr.CR_CITY_AR || cr.CR_CITY_EN, 255),
+      ZCityCode_KUT: str(cr.CITY_CODE || cr.CR_CITY_CODE, 40),
+      ZPOSTAL_CODE_KUT: str(cr.POSTAL_CODE || cr.CR_ZIPCODE, 20),
+      ZDISTRICT_KUT: str(cr.DISTRICT, 100),
+      ZSTREET_KUT: str(cr.STREET, 39),
+      ZBUILDING_KUT: str(cr.BUILDING, 40),
+      ZSECONDARY_NUMBER_KUT: str(cr.SECONDARY_NUMBER, 40),
+    });
+    try {
+      const response = await executeHttpRequest({ destinationName: DESTINATION }, {
+        method: 'PATCH', url: `${ROOT}CorporateAccountCollection('${id}')`, timeout: 25000,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, data: payload,
+      }, { fetchCsrfToken });
+      if (![200, 204].includes(response?.status)) throw new Error('unexpected status');
+    } catch (error) {
+      throw c4cWriteError(error);
+    }
   }
 
   async function get(collection, filter, limit = 10) {
@@ -312,6 +369,18 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
     return findCreatedQuote(accountID, licenseType, payload, row);
   }
 
+  async function createRenewalQuote(accountID, licenseType, input, config) {
+    const response = await post('SalesQuoteCollection', buildRenewalQuotePayload(accountID, licenseType, input, config));
+    const row = entityFromResponse(response);
+    const quoteID = str(row?.ID, 120);
+    const quoteObjectID = str(row?.ObjectID, 120);
+    if (!quoteID || !quoteObjectID) {
+      throw new LicenseError('C4C_WRITE_UNCERTAIN',
+        'C4C renewal was submitted but identifiers were not returned; reconcile before retrying', 503);
+    }
+    return { quoteID, quoteObjectID };
+  }
+
   async function uploadAttachment(quote, file) {
     if (!quote?.quoteID || !quote?.quoteObjectID || !file?.name ||
         !file?.contentBase64 || !file?.mimeType || !Number.isSafeInteger(file?.byteLength)) {
@@ -333,7 +402,9 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
     createAccount,
     findMatchingContacts,
     createContact,
+    patchAccount,
     createQuote,
+    createRenewalQuote,
     uploadAttachment
   };
 }
@@ -342,5 +413,6 @@ module.exports = {
   createC4cWriter,
   buildAccountPayload,
   buildQuotePayload,
+  buildRenewalQuotePayload,
   buildContactPayload
 };

@@ -140,6 +140,8 @@ test("My Licenses and My Requests scoped to verified C4C account", async () => {
     LicenseNumber_KUT: "LIC-1",
     LicenseStatus_KUTText: "Active",
     Port3_KUT: "JED",
+    LicenseValidFrom_KUT: "/Date(1735689600000)/",
+    LicenseValidTo_KUT: "/Date(1830211200000)/",
   };
   const c4c = {
     findAccountsForCr: async () => [account],
@@ -150,13 +152,22 @@ test("My Licenses and My Requests scoped to verified C4C account", async () => {
         ObjectID: "Q1",
         Role1_KUT: "ZSA010",
         RequestType_KUT: "NEW",
+        Type1_KUT: "LICENSE",
+        Port3_KUT: "JED",
         LiscenceStatus_KUTText: "Open",
+        NetAmount: "1500",
+        CreationDateTime: "/Date(1794643200000)/",
       },
     ],
   };
   const q = createLicenseQueries({
     crs: { listForUser: async () => [CR] },
     c4c,
+    loadList: async code => ({ items: ({
+      LICENSE_TYPE: [{ key: "ZSA010", title: "Ship supplier", titleAr: "مورد سفن", active: true }],
+      PORT_FOR_PERMIT: [{ key: "JED", title: "Jeddah", titleAr: "جدة", active: true }],
+      SERVICE_TYPE: [{ key: "LICENSE", title: "License", titleAr: "ترخيص", active: true }],
+    })[code] }),
   });
   assert.deepEqual(await q.getMyLicenses(USER_UUID), [
     {
@@ -164,11 +175,20 @@ test("My Licenses and My Requests scoped to verified C4C account", async () => {
       ObjectID: "C1",
       LicenseNumber: "LIC-1",
       LicenseType: "ZSA010",
+      LicenseTypeText: "Ship supplier",
+      LicenseTypeTextAr: "مورد سفن",
       CRNationalNumber: CR.CR_NATIONAL_NUMBER,
       CommercialRegistrationNumber: CR.CR_NUMBER,
       CompanyName: "Client",
       Port: "JED",
+      PortText: "Jeddah",
+      PortTextAr: "جدة",
       Status: "Active",
+      StartDate: "2025-01-01",
+      ExpiryDate: "2027-12-31",
+      Amount: "",
+      QuoteID: "",
+      QuoteObjectID: "",
     },
   ]);
   assert.deepEqual(await q.getMyRequests(USER_UUID), [
@@ -177,13 +197,64 @@ test("My Licenses and My Requests scoped to verified C4C account", async () => {
       ObjectID: "Q1",
       BuyerPartyID: "A1",
       LicenseType: "ZSA010",
+      LicenseTypeText: "Ship supplier",
+      LicenseTypeTextAr: "مورد سفن",
       RequestType: "NEW",
+      ServiceType: "LICENSE",
+      ServiceTypeText: "License",
+      ServiceTypeTextAr: "ترخيص",
+      Port: "JED",
+      PortText: "Jeddah",
+      PortTextAr: "جدة",
       Status: "Open",
-      Amount: "",
+      Amount: "1500",
+      CreatedAt: "2026-11-14",
       CRNationalNumber: CR.CR_NATIONAL_NUMBER,
       CommercialRegistrationNumber: CR.CR_NUMBER,
+      CompanyName: "Client",
     },
   ]);
+});
+
+test("attachment reads use only a scoped license account or request", async () => {
+  const account = {
+    AccountID: "A1", ObjectID: "C1", RoleCode: "ZSA010", LicenseNumber_KUT: "LIC-1",
+    CRNationalNumber_KUT: CR.CR_NATIONAL_NUMBER, CommercialRegisterNumber_KUT: CR.CR_NUMBER,
+  };
+  const quote = {
+    ID: "900", ObjectID: "Q1", BuyerPartyID: "A1", LicenceType_KUT: "ZSA010",
+    LiscenceStatus_KUT: "121", CreationDateTime: "2026-11-14T08:00:00",
+  };
+  const calls = [];
+  const q = createLicenseQueries({
+    crs: { listForUser: async () => [CR] },
+    c4c: {
+      findAccountsForCr: async () => [account],
+      findQuotesForAccount: async () => [quote],
+      salesQuoteAttachments: async objectId => { calls.push(objectId); return [{ Name: "proof.pdf" }]; },
+    },
+  });
+  assert.deepEqual(await q.getLicenseAttachments(USER_UUID, "A1"), [{ Name: "proof.pdf" }]);
+  assert.deepEqual(await q.getRequestAttachments(USER_UUID, "900"), [{ Name: "proof.pdf" }]);
+  assert.deepEqual(calls, ["Q1", "Q1"]);
+  await assert.rejects(q.getLicenseAttachments(USER_UUID, "OTHER"), error => error.code === "LICENSE_NOT_FOUND");
+  await assert.rejects(q.getRequestAttachments(USER_UUID, "OTHER"), error => error.code === "REQUEST_NOT_FOUND");
+});
+
+test("legacy license and request status codes are translated when C4C text is absent", async () => {
+  const account = {
+    AccountID: "A1", RoleCode: "ZSA010", LicenseNumber_KUT: "LIC-1", LicenseStatus_KUT: "111",
+    CRNationalNumber_KUT: CR.CR_NATIONAL_NUMBER, CommercialRegisterNumber_KUT: CR.CR_NUMBER,
+  };
+  const q = createLicenseQueries({
+    crs: { listForUser: async () => [CR] },
+    c4c: {
+      findAccountsForCr: async () => [account],
+      findQuotesForAccount: async () => [{ ID: "1", ObjectID: "Q1", BuyerPartyID: "A1", LiscenceStatus_KUT: "121" }],
+    },
+  });
+  assert.equal((await q.getMyLicenses(USER_UUID))[0].Status, "Expired");
+  assert.equal((await q.getMyRequests(USER_UUID))[0].Status, "Approved");
 });
 
 test("C4C paging retains filter and never follows next-link host", async () => {

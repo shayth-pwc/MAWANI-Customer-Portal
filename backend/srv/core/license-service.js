@@ -25,6 +25,7 @@ const {
 } = require("./licenses/reference-lists");
 const { trustedIdentity } = require("./security/identity");
 const { createLicensePreflight } = require("./licenses/license-preflight");
+const { createRenewalSubmitter } = require('./licenses/renewal-service');
 
 function safeReject(req, error) {
   if (error instanceof LicenseError || error instanceof AppError)
@@ -58,8 +59,14 @@ module.exports = cds.service.impl(function () {
     try {
       const actor = await getActor(req);
       const crs = createCrRepository(await db());
-      const queries = createLicenseQueries({ crs, c4c: getC4c() });
-      return await queries[operation](actor.UUID);
+      const listService = await cds.connect.to('ListService');
+      const queries = createLicenseQueries({
+        crs,
+        c4c: getC4c(),
+        loadList: async code => parseDefinition(
+          await listService.send('getList', { app: LIST_APP, code }), code, LIST_APP)
+      });
+      return await queries[operation](actor.UUID, ...Object.values(req.data || {}));
     } catch (error) {
       return safeReject(req, error);
     }
@@ -96,6 +103,8 @@ module.exports = cds.service.impl(function () {
   });
   this.on("getMyLicenses", (req) => reads(req, "getMyLicenses"));
   this.on("getMyRequests", (req) => reads(req, "getMyRequests"));
+  this.on('getLicenseAttachments', req => reads(req, 'getLicenseAttachments'));
+  this.on('getRequestAttachments', req => reads(req, 'getRequestAttachments'));
   this.on("checkC4cConnection", async (req) => {
     try {
       ensureTrusted(req);
@@ -254,15 +263,19 @@ this.on('preflightLicenseSubmission', async req => {
     }
   });
 
-  // RENEW stays disabled: its different C4C eligibility and date contract are not verified.
-  this.on("renewLicense", (req) => {
+  this.on("renewLicense", async (req) => {
     try {
-      ensureTrusted(req);
-      throw new LicenseError(
-        "LICENSE_RENEW_NOT_READY",
-        "C4C renewal business rules and dates require separate approval",
-        503,
-      );
+      const identity = ensureTrusted(req);
+      const actor = await getActor(req);
+      const database = await db();
+      const submitter = createRenewalSubmitter({
+        crs: createCrRepository(database),
+        c4c: getC4c(),
+        writer: createC4cWriter({ executeHttpRequest: require('@sap-cloud-sdk/http-client').executeHttpRequest }),
+        operations: createSubmissionOperations(database),
+        config: configurationFromEnv(),
+      });
+      return JSON.stringify(await submitter.submit({ actorUuid: actor.UUID, identity, rawPayload: req.data.payload }));
     } catch (error) {
       return safeReject(req, error);
     }

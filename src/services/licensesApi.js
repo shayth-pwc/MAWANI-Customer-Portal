@@ -107,6 +107,24 @@ export async function getMyRequests(fetcher = fetch) {
     throw new LicenseApiError("Invalid requests response");
   return result;
 }
+export async function getLicenseAttachments(accountId, fetcher = fetch) {
+  const result = await request(
+    `getLicenseAttachments(accountId=${odataStringLiteral(String(accountId))})`,
+    { fetcher },
+  );
+  if (!Array.isArray(result))
+    throw new LicenseApiError("Invalid license attachments response");
+  return result;
+}
+export async function getRequestAttachments(requestId, fetcher = fetch) {
+  const result = await request(
+    `getRequestAttachments(requestId=${odataStringLiteral(String(requestId))})`,
+    { fetcher },
+  );
+  if (!Array.isArray(result))
+    throw new LicenseApiError("Invalid license request attachments response");
+  return result;
+}
 export const getC4cConnection = (fetcher = fetch) =>
   request("checkC4cConnection()", { fetcher });
 export async function getServicePrices(fetcher = fetch) {
@@ -134,6 +152,19 @@ export async function submitLicenseRequest(payload, fetcher = fetch) {
     throw new LicenseApiError(
       "Invalid license submission result; check C4C before retrying",
     );
+  }
+}
+export async function renewLicenseRequest(payload, fetcher = fetch) {
+  const result = await request("renewLicense", {
+    body: { payload: JSON.stringify(payload) },
+    fetcher,
+  });
+  if (typeof result !== "string")
+    throw new LicenseApiError("Invalid license renewal response");
+  try {
+    return JSON.parse(result);
+  } catch {
+    throw new LicenseApiError("Invalid renewal result; check C4C before retrying");
   }
 }
 export async function fileToC4cAttachment(file) {

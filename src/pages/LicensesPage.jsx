@@ -22,9 +22,13 @@ import {
   submitLicenseRequest,
   fileToC4cAttachment,
   getMyCommercialRegistrations,
+  getLicenseAttachments,
+  getRequestAttachments,
+  renewLicenseRequest,
 } from "../services/licensesApi";
 import { calculatePreview, displaySar } from "../services/licensePricing";
 import { crToForm, crFieldIsLocked } from "../services/licenseCrForm";
+import { useLicenseLookups } from "../hooks/useLicenseLookups";
 
 const emptyFilters = {
   start: "",
@@ -193,7 +197,7 @@ function selectedStatuses(filters) {
 }
 
 export default function LicensesPage() {
-  const { t } = useApp();
+  const { t, language } = useApp();
   const [tab, setTab] = useState("licenses");
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
@@ -209,6 +213,7 @@ export default function LicensesPage() {
   const [resizing, setResizing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [drawer, setDrawer] = useState(null);
+  const [renewalRow, setRenewalRow] = useState(null);
   const filterRef = useRef(null);
 
   useEffect(() => {
@@ -242,30 +247,35 @@ export default function LicensesPage() {
         remoteLicenses.map((r, index) => ({
           id: r.ObjectID || r.AccountID || String(index),
           code: r.LicenseNumber || "",
-          name: r.CompanyName || r.LicenseType || "",
+          name: (language === "ar" ? r.LicenseTypeTextAr : r.LicenseTypeText) || r.LicenseType || "",
           title: r.CompanyName || "",
-          start: "",
-          expiry: "",
+          start: r.StartDate || "",
+          expiry: r.ExpiryDate || "",
           status: r.Status || "",
-          service: r.LicenseType || "",
+          service: (language === "ar" ? r.PortTextAr : r.PortText) || r.Port || "",
           cr: r.CRNationalNumber || "",
-          amount: "",
+          amount: r.Amount || "",
           company: r.CompanyName || "",
+          accountId: r.AccountID || "",
+          crNumber: r.CommercialRegistrationNumber || "",
+          licenseType: r.LicenseType || "",
+          kind: "license",
         })),
       );
       setRequests(
         remoteRequests.map((r, index) => ({
           id: r.ObjectID || r.ID || String(index),
           code: r.ID || "",
-          name: r.LicenseType || "",
-          title: r.LicenseType || "",
-          start: "",
+          name: (language === "ar" ? r.LicenseTypeTextAr : r.LicenseTypeText) || r.LicenseType || "",
+          title: (language === "ar" ? r.LicenseTypeTextAr : r.LicenseTypeText) || r.LicenseType || "",
+          start: r.CreatedAt || "",
           expiry: "",
           status: r.Status || "",
-          service: r.RequestType || "",
+          service: (language === "ar" ? r.ServiceTypeTextAr : r.ServiceTypeText) || r.ServiceType || r.RequestType || "",
           cr: r.CRNationalNumber || "",
           amount: r.Amount || "",
-          company: r.CommercialRegistrationNumber || "",
+          company: r.CompanyName || r.CommercialRegistrationNumber || "",
+          kind: "request",
         })),
       );
     } catch (error) {
@@ -275,7 +285,7 @@ export default function LicensesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
   useEffect(() => {
     let active = true;
 
@@ -419,9 +429,7 @@ export default function LicensesPage() {
   }
 
   function renew() {
-    setPageError(
-      "Renewal is unavailable until the original C4C renewal contract and commercial-registration authorization are verified. No request was sent.",
-    );
+    setRenewalRow(drawer);
     setDrawer(null);
   }
 
@@ -629,6 +637,14 @@ export default function LicensesPage() {
         onClose={() => setDrawer(null)}
         onRenew={renew}
       />
+      <RenewLicenseModal
+        row={renewalRow}
+        onClose={() => setRenewalRow(null)}
+        onComplete={async () => {
+          await reloadFromC4c();
+          setRenewalRow(null);
+        }}
+      />
       <NewLicenseModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -789,7 +805,7 @@ function LicenseMobileCard({ row, onOpen }) {
         </div>
       </div>
       <div className="mt-3 flex items-center justify-end gap-1">
-        {row.status === "Expired" ? (
+        {row.kind === "license" && row.status === "Expired" ? (
           <button
             type="button"
             aria-label={t("licRenew")}
@@ -1067,7 +1083,7 @@ function LicenseTable({
               <td className="border-b border-border px-6">{row.company}</td>
               <td className="border-b border-border px-4">
                 <div className="flex items-center justify-end gap-1">
-                  {row.status === "Expired" ? (
+                  {row.kind === "license" && row.status === "Expired" ? (
                     <Hint label={t("licRenew")}>
                       <button
                         type="button"
@@ -1176,6 +1192,32 @@ function EmptyLicenses({ onCreate, requests }) {
 
 function LicenseDrawer({ row, onClose, onRenew }) {
   const { t } = useApp();
+  const [attachments, setAttachments] = useState([]);
+  const [attachmentsError, setAttachmentsError] = useState("");
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  useEffect(() => {
+    if (!row) return undefined;
+    let active = true;
+    setAttachments([]);
+    setAttachmentsError("");
+    setAttachmentsLoading(true);
+    const load = row.kind === "request"
+      ? getRequestAttachments(row.code)
+      : getLicenseAttachments(row.accountId);
+    load
+      .then((items) => {
+        if (active) setAttachments(items);
+      })
+      .catch((error) => {
+        if (active) setAttachmentsError(error.message || "Could not load attachments");
+      })
+      .finally(() => {
+        if (active) setAttachmentsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [row?.accountId, row?.code, row?.kind]);
   if (!row) return null;
 
   return (
@@ -1234,9 +1276,28 @@ function LicenseDrawer({ row, onClose, onRenew }) {
               ))}
             </div>
           </section>
-          {/* C4C attachments will appear here only after a verified attachment-read contract is integrated. */}
+          <section className="border-t border-border px-6 py-5">
+            <h3 className="text-sm font-medium text-text-placeholder">{t("reqAttachments")}</h3>
+            {attachmentsLoading ? <p className="mt-3 text-sm text-text-tertiary">Loading…</p> : null}
+            {attachmentsError ? <p className="mt-3 text-sm text-[#b54708]">{attachmentsError}</p> : null}
+            {!attachmentsLoading && !attachmentsError && attachments.length === 0 ? (
+              <p className="mt-3 text-sm text-text-tertiary">—</p>
+            ) : null}
+            <div className="mt-3 flex flex-col gap-2">
+              {attachments.map((attachment, index) => (
+                <button
+                  key={`${attachment.Name || "attachment"}-${index}`}
+                  type="button"
+                  className="rounded-lg border border-border px-3 py-2 text-start text-sm font-medium text-brand"
+                  onClick={() => downloadLicenseAttachment(attachment)}
+                >
+                  {attachment.Name || t("reqAttachments")}
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
-        {row.status === "Expired" ? (
+        {row.kind === "license" && row.status === "Expired" ? (
           <div className="border-t border-border px-6 py-4 lg:flex lg:justify-end">
             <Button
               className="h-11 w-full lg:h-10 lg:w-auto"
@@ -1247,6 +1308,96 @@ function LicenseDrawer({ row, onClose, onRenew }) {
           </div>
         ) : null}
       </aside>
+    </div>
+  );
+}
+
+function downloadLicenseAttachment(attachment) {
+  if (typeof attachment?.Binary !== "string" || !attachment.Binary) return;
+  const raw = atob(attachment.Binary);
+  const bytes = Uint8Array.from(raw, (value) => value.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: attachment.MimeType || "application/octet-stream" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = attachment.Name || "attachment";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function RenewLicenseModal({ row, onClose, onComplete }) {
+  const { t } = useApp();
+  const { lists, loading: listsLoading, error: listsError } = useLicenseLookups(Boolean(row));
+  const [form, setForm] = useState({ name: "", id: "", documentType: "", mobile: "", email: "", accepted: false, file: null });
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  useEffect(() => {
+    if (!row) return;
+    setForm({ name: "", id: "", documentType: "", mobile: "", email: "", accepted: false, file: null });
+    setError("");
+  }, [row]);
+  if (!row) return null;
+  const fields = [
+    ["name", t("reqApplicantName"), "text"],
+    ["id", t("reqApplicantId"), "text"],
+    ["mobile", t("reqApplicantMobile"), "tel"],
+    ["email", t("reqApplicantEmail"), "email"],
+  ];
+  async function submit(event) {
+    event.preventDefault();
+    if (!form.accepted || !form.name || !form.id || !form.documentType || !form.mobile || !form.email) {
+      setError(t("fieldRequired"));
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const attachments = form.file ? [await fileToC4cAttachment(form.file)] : [];
+      const result = await renewLicenseRequest({
+        clientRequestId: crypto.randomUUID(), accountId: row.accountId, licenseNumber: row.code,
+        licenseType: row.licenseType, crNationalNumber: row.cr, crNumber: row.crNumber,
+        applicant: { name: form.name, id: form.id, documentType: form.documentType, mobile: form.mobile, email: form.email },
+        address: {}, attachments,
+      });
+      if (result.status !== "SUCCEEDED") throw new Error(result.message || "Renewal requires reconciliation before retrying");
+      await onComplete();
+    } catch (submitError) {
+      setError(submitError.message || "License renewal failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" aria-label={t("close")} className="absolute inset-0 bg-[#0a0d12]/70" onClick={onClose} />
+      <form onSubmit={submit} className="relative max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-text-primary">{t("licRenewBtn")}</h2>
+        <p className="mt-1 text-sm text-text-tertiary">{row.code} · {row.name}</p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {fields.map(([key, label, type]) => (
+            <label key={key} className="text-sm font-medium text-text-secondary">{label}
+              <input required type={type} value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })}
+                className="mt-1 h-10 w-full rounded-lg border border-border px-3 text-text-primary" />
+            </label>
+          ))}
+          <label className="text-sm font-medium text-text-secondary">{t("reqApplicantDocType")}
+            <select required value={form.documentType} onChange={event => setForm({ ...form, documentType: event.target.value })}
+              className="mt-1 h-10 w-full rounded-lg border border-border bg-white px-3 text-text-primary">
+              <option value="">{listsLoading ? "Loading…" : "—"}</option>
+              {(lists.APPLICANT_DOCUMENT_TYPE || []).map(item => <option key={item.key} value={item.key}>{item.title}</option>)}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-text-secondary">{t("reqAttachments")}
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={event => setForm({ ...form, file: event.target.files?.[0] || null })}
+              className="mt-1 block w-full text-sm" />
+          </label>
+        </div>
+        {listsError ? <p className="mt-3 text-sm text-[#b54708]">{listsError}</p> : null}
+        <label className="mt-5 flex gap-2 text-sm text-text-secondary"><input type="checkbox" checked={form.accepted}
+          onChange={event => setForm({ ...form, accepted: event.target.checked })} />{t("reqAcceptTerms")}</label>
+        {error ? <p role="alert" className="mt-3 text-sm text-[#d92d20]">{error}</p> : null}
+        <div className="mt-6 flex justify-end gap-3"><Button variant="secondary" onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" disabled={submitting || listsLoading}>{submitting ? "…" : t("licRenewBtn")}</Button></div>
+      </form>
     </div>
   );
 }
