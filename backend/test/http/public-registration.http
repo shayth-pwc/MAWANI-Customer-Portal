@@ -1,0 +1,31 @@
+@baseUrl = https://mawani-btp-dev-mawani-btp-dev-sp-mawani-portal-router.cfapps.sa30.hana.ondemand.com
+@documentNumber = REPLACE_WITH_DOCUMENT_NUMBER
+
+### These endpoints are intentionally public. Do not send an Authorization header.
+GET {{baseUrl}}/public-registration/getRegistrationLists()
+Accept: application/json
+
+### Start CR validation and receive the configured Nafath login URL
+POST {{baseUrl}}/public-registration/startNafathValidation
+Content-Type: application/json
+Accept: application/json
+
+{
+  "input": "{\"documentType\":\"1\",\"documentNumber\":\"{{documentNumber}}\",\"nationalityId\":\"113\",\"language\":\"EN\"}"
+}
+
+### Nafath redirects to the configured callback with TokenID
+GET {{baseUrl}}/public-registration/nafath-callback?TokenID=REPLACE_WITH_NAFATH_TOKEN
+
+### Poll validation state after returning from Nafath
+GET {{baseUrl}}/public-registration/nafathStatus(documentNumber='{{documentNumber}}')
+Accept: application/json
+
+### Complete only after Nafath status is VALID
+POST {{baseUrl}}/public-registration/completeRegistration
+Content-Type: application/json
+Accept: application/json
+
+{
+  "input": "{\"documentType\":\"1\",\"documentNumber\":\"{{documentNumber}}\",\"email\":\"replace@example.com\",\"phoneCountryCode\":\"+966\",\"mobile\":\"0500000000\",\"disclaimerAccepted\":true}"
+}

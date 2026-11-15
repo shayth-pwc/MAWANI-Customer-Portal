@@ -77,6 +77,14 @@
       "cacheControl": "no-store"
     },
     {
+      "source": "^/public-registration(?:/(.*))?$",
+      "target": "/public-registration/$1",
+      "destination": "srv-api",
+      "authenticationType": "none",
+      "csrfProtection": true,
+      "cacheControl": "no-store"
+    },
+    {
       "source": "^/assets/(.*)$",
       "target": "assets/$1",
       "localDir": "portal-bootstrap",
