@@ -378,10 +378,15 @@ test('service and Application Router entry point require IAS authentication', as
     '^/assets/(.*)$',
     '^/(.*\\.(?:ico|png|svg|jpg|jpeg|webp|gif|woff2?|css|js|txt|json))$',
     '^/(login|signup|forgot-password|signed-out)$',
+    '^/public-registration(?:/(.*))?$',
   ]);
   for (const route of routes.filter((r) => r.authenticationType === 'none')) {
     assert.ok(allowedPublic.has(route.source), 'Unexpected public route: ' + route.source);
-    assert.equal(route.localDir, 'portal-bootstrap');
+    if (route.source === '^/public-registration(?:/(.*))?$') {
+      assert.equal(route.destination, 'srv-api');
+      assert.equal(route.target, '/public-registration/$1');
+      assert.equal(route.csrfProtection, true);
+    } else assert.equal(route.localDir, 'portal-bootstrap');
   }
   assert.equal(forUrl('/signed-out')?.authenticationType, 'none');
   const fallback = routes.at(-1);
