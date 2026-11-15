@@ -2,7 +2,7 @@
 const { executeHttpRequest } = require('@sap-cloud-sdk/http-client');
 const { randomUUID } = require('node:crypto');
 const { AppError } = require('../utils/errors');
-const CR_DESTINATION = 'CR_REST_API_PROD'; const NAFATH_DESTINATION = 'Nafath';
+const CR_DESTINATION = 'CR_REST_API_PROD'; const NAFATH_DESTINATION = 'NafathDestination';
 function config(env = process.env) {
   const loginUrl = env.MAWANI_NAFATH_LOGIN_URL;
   const user = env.MAWANI_NAFATH_USERNAME; const password = env.MAWANI_NAFATH_PASSWORD;
