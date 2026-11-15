@@ -5,8 +5,17 @@
 GET {{baseUrl}}/public-registration/getRegistrationLists()
 Accept: application/json
 
+### Fetch a CSRF token for the public POST requests (no IAS login required)
+# @name csrf
+GET {{baseUrl}}/public-registration/
+X-CSRF-Token: Fetch
+Accept: application/json
+
+@csrfToken = {{csrf.response.headers.x-csrf-token}}
+
 ### Start CR validation and receive the configured Nafath login URL
 POST {{baseUrl}}/public-registration/startNafathValidation
+X-CSRF-Token: {{csrfToken}}
 Content-Type: application/json
 Accept: application/json
 
@@ -23,6 +32,7 @@ Accept: application/json
 
 ### Complete only after Nafath status is VALID
 POST {{baseUrl}}/public-registration/completeRegistration
+X-CSRF-Token: {{csrfToken}}
 Content-Type: application/json
 Accept: application/json
 
