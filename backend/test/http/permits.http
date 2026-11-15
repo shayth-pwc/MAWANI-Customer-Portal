@@ -1,0 +1,50 @@
+@baseUrl = https://mawani-btp-dev-mawani-btp-dev-sp-mawani-portal-router.cfapps.sa30.hana.ondemand.com
+# Paste a current IAS access token here. Do not commit a real token.
+@accessToken = REPLACE_WITH_IAS_ACCESS_TOKEN
+@accountId = REPLACE_WITH_LICENSE_ACCOUNT_ID
+@requestId = REPLACE_WITH_PERMIT_REQUEST_ID
+
+### Service metadata
+GET {{baseUrl}}/permits/$metadata
+Authorization: Bearer {{accessToken}}
+Accept: application/xml
+
+### Licenses eligible for permit selection
+GET {{baseUrl}}/permits/getMyLicenses()
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### All permit requests and issued permissions for the signed-in user's CRs
+GET {{baseUrl}}/permits/getMyPermitRequests()
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Attachments of the newest C4C quote for one scoped license
+GET {{baseUrl}}/permits/getLicenseAttachments(accountId='{{accountId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Attachments of one scoped permit request
+GET {{baseUrl}}/permits/getPermitAttachments(requestId='{{requestId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Get a CSRF token before submitting
+# @name csrf
+GET {{baseUrl}}/permits/
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: Fetch
+Accept: application/json
+
+@csrfToken = {{csrf.response.headers.x-csrf-token}}
+
+### Submit a permit without attachments
+POST {{baseUrl}}/permits/submitPermit
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: {{csrfToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "payload": "{\"accountId\":\"{{accountId}}\",\"permitType\":\"ZMZW\",\"port\":\"S1700\",\"place\":\"111\",\"disclaimerAccepted\":true,\"attachments\":[]}"
+}
