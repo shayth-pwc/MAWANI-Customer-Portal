@@ -245,6 +245,10 @@ this.on('preflightLicenseSubmission', async req => {
         writer: createC4cWriter({
           executeHttpRequest: require("@sap-cloud-sdk/http-client")
             .executeHttpRequest,
+          // The established C4C technical-user destination accepts the
+          // legacy direct writes but rejects the Cloud SDK's CSRF HEAD probe
+          // with HTTP 405.  Do not issue that unsupported preflight.
+          fetchCsrfToken: false,
         }),
         pricing: createServicePricing(database),
         operations: createSubmissionOperations(database),
@@ -271,7 +275,11 @@ this.on('preflightLicenseSubmission', async req => {
       const submitter = createRenewalSubmitter({
         crs: createCrRepository(database),
         c4c: getC4c(),
-        writer: createC4cWriter({ executeHttpRequest: require('@sap-cloud-sdk/http-client').executeHttpRequest }),
+        writer: createC4cWriter({
+          executeHttpRequest: require('@sap-cloud-sdk/http-client').executeHttpRequest,
+          // Same destination and C4C OData endpoint as a new submission.
+          fetchCsrfToken: false,
+        }),
         operations: createSubmissionOperations(database),
         config: configurationFromEnv(),
       });
