@@ -17,6 +17,7 @@ const { DESTINATION, ROOT } = require('./c4c-client');
 const WRITABLE_COLLECTIONS = new Set([
   'CorporateAccountCollection',
   'ContactCollection',
+  'CorporateAccountHasContactPersonCollection',
   'SalesQuoteCollection',
   'SalesQuoteAttachmentFolderCollection'
 ]);
@@ -87,6 +88,13 @@ function buildAccountPayload(cr, input, licenseType) {
     ZSTREET_KUT: str(cr.STREET || input.address?.street, 100),
     ZBUILDING_KUT: str(cr.BUILDING || input.address?.building, 40),
     ZSECONDARY_NUMBER_KUT: str(cr.SECONDARY_NUMBER || input.address?.secondaryNumber, 40),
+    // The legacy UI writes CountryCode as part of every new C4C account address.
+    // Saudi Arabia is the agreed, static value for this portal flow.
+    CountryCode: 'SA',
+    City: str(cr.CR_CITY_EN || cr.CR_CITY_AR || input.address?.cityCode, 80),
+    Street: str(cr.STREET || input.address?.street, 100),
+    HouseNumber: str(cr.BUILDING || input.address?.building, 40),
+    StreetPostalCode: str(cr.POSTAL_CODE || cr.CR_ZIPCODE || input.address?.postalCode, 20),
     Port3_KUT: input.portCode || undefined
   });
 }
@@ -229,7 +237,7 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
   }
 
   async function get(collection, filter, limit = 10) {
-    if (!['CorporateAccountCollection', 'ContactCollection', 'SalesQuoteCollection'].includes(collection)) {
+    if (!['CorporateAccountCollection', 'ContactCollection', 'CorporateAccountHasContactPersonCollection', 'SalesQuoteCollection'].includes(collection)) {
       throw new TypeError('Unapproved C4C read collection');
     }
     const url = `${ROOT}${collection}?$filter=${encodeURIComponent(filter)}` +
@@ -310,6 +318,24 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
         'C4C contact creation response lacks identifiers; reconcile before retrying', 503);
     }
     return { contactID: str(row.ContactID, 120), objectID: str(row.ObjectID, 120) };
+  }
+
+  async function makeContactMain(accountID, contactID) {
+    const account = str(accountID, 80); const contact = str(contactID, 120);
+    if (!account || !contact) throw new LicenseError('C4C_CONTACT_IDENTIFIER_REQUIRED', 'C4C contact identifier is unavailable', 503);
+    const rows = await get('CorporateAccountHasContactPersonCollection',
+      `AccountID eq ${odataString(account)} and ContactID eq ${odataString(contact)}`, 2);
+    if (rows.length !== 1 || str(rows[0].AccountID, 80) !== account || str(rows[0].ContactID, 120) !== contact || !/^[A-Za-z0-9_-]+$/.test(str(rows[0].ObjectID, 120))) {
+      throw new LicenseError('C4C_CONTACT_RELATION_UNAVAILABLE', 'C4C account contact relationship could not be uniquely verified', 503);
+    }
+    try {
+      const response = await executeHttpRequest({ destinationName: DESTINATION }, {
+        method: 'PATCH', url: `${ROOT}CorporateAccountHasContactPersonCollection('${rows[0].ObjectID}')`, timeout: 25000,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        data: { AccountID: account, ContactID: contact, MainIndicator: true }
+      }, { fetchCsrfToken });
+      if (![200, 204].includes(response?.status)) throw new Error('unexpected status');
+    } catch (error) { throw c4cWriteError(error); }
   }
 
   async function findCreatedQuote(accountID, licenseType, payload, postRow) {
@@ -402,6 +428,7 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
     createAccount,
     findMatchingContacts,
     createContact,
+    makeContactMain,
     patchAccount,
     createQuote,
     createRenewalQuote,
