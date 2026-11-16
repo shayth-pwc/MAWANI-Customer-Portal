@@ -313,11 +313,24 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
   async function createContact(accountID, input) {
     const response = await post('ContactCollection', buildContactPayload(accountID, input));
     const row = entityFromResponse(response);
-    if (!str(row?.ContactID, 120) && !str(row?.ObjectID, 120)) {
-      throw new LicenseError('C4C_WRITE_UNCERTAIN',
-        'C4C contact creation response lacks identifiers; reconcile before retrying', 503);
+    const contactID = str(row?.ContactID, 120);
+    if (contactID) {
+      return { contactID, objectID: str(row?.ObjectID, 120) };
     }
-    return { contactID: str(row.ContactID, 120), objectID: str(row.ObjectID, 120) };
+
+    // C4C can confirm a Contact POST with an empty body (or only an ObjectID).
+    // ContactID is required for the account-contact relationship, so perform one
+    // exact scoped read-back.  Never repeat the POST: it may already have created
+    // the contact remotely.
+    const matches = await findMatchingContacts(accountID, input.applicant.mobile);
+    if (matches.length !== 1 || !str(matches[0].ContactID, 120)) {
+      throw new LicenseError('C4C_WRITE_UNCERTAIN',
+        'C4C contact creation response lacks a uniquely verified ContactID; reconcile before retrying', 503);
+    }
+    return {
+      contactID: str(matches[0].ContactID, 120),
+      objectID: str(matches[0].ObjectID, 120),
+    };
   }
 
   async function makeContactMain(accountID, contactID) {
