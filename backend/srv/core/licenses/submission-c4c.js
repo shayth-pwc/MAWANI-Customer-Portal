@@ -35,6 +35,15 @@ function withoutBlank(object) {
     value !== '' && value !== null && value !== undefined));
 }
 
+// C4C normalises Saudi mobile numbers when storing ContactCollection records.
+// This reproduces the legacy UI5 lookup: a submitted 05xxxxxxxx becomes
+// +966 5xxxxxxxx.  The POST still sends the original user-entered value.
+function c4cLookupMobile(value) {
+  const mobile = str(value, 40);
+  if (!mobile) return '';
+  return (mobile.startsWith('0') ? mobile : `0${mobile}`).replace(/^0+/, '+966 ');
+}
+
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -301,9 +310,10 @@ function createC4cWriter({ executeHttpRequest, fetchCsrfToken = true } = {}) {
   }
 
   async function findMatchingContacts(accountID, mobile) {
-    const filter = `AccountID eq ${odataString(accountID)} and Mobile eq ${odataString(mobile)}`;
+    const lookupMobile = c4cLookupMobile(mobile);
+    const filter = `AccountID eq ${odataString(accountID)} and Mobile eq ${odataString(lookupMobile)}`;
     const rows = await get('ContactCollection', filter, 5);
-    if (rows.some(row => row.AccountID !== accountID || row.Mobile !== mobile)) {
+    if (rows.some(row => row.AccountID !== accountID || row.Mobile !== lookupMobile)) {
       throw new LicenseError('C4C_SCOPE_MISMATCH',
         'Unexpected C4C contact lookup response', 503);
     }
