@@ -24,7 +24,7 @@ const identity = { issuer: 'https://ias.example.invalid', subject: 'u-1' };
 const config = {
   writesEnabled: true, contractReviewed: true, space: 'DEV', allowedSpace: 'DEV',
   salesOrg: 'SVERIFIED', salesUnit: 'SVERIFIED', allowedStatuses: new Set(['APPROVED']),
-  createAccounts: true, createContacts: false, uploadAttachments: true
+  createAccounts: true, createContacts: true, uploadAttachments: true
 };
 function fakeOperations() {
   const saved = new Map();
@@ -58,6 +58,7 @@ function fixture({ accounts = [{ AccountID: '10001', RoleCode: 'TEST03', License
     async createAccount(_cr, _input, type) { calls.push(['account', type]); return { accountID: '10002' }; },
     async createContact() { calls.push(['contact']); return { contactID: 'C1' }; },
     async findMatchingContacts() { return []; },
+    async makeContactMain(accountID, contactID) { calls.push(['contact-main', accountID, contactID]); },
     async createQuote(accountID, type, input, options) {
       calls.push(['quote', accountID, type, input.serviceTypes[0], options.salesOrg]);
       return { quoteID: 'Q100', quoteObjectID: 'O100' };
@@ -150,7 +151,7 @@ test('when no account exists, one is created first then one C4C quote', async ()
   const ctx = fixture({ accounts: [] });
   const r = await ctx.call();
   assert.equal(r.results[0].status, 'SUCCEEDED');
-  assert.deepEqual(ctx.calls.filter(x => ['account','quote'].includes(x[0])).map(x => x[0]), ['account','quote']);
+  assert.deepEqual(ctx.calls.filter(x => ['account','contact','contact-main','quote'].includes(x[0])).map(x => x[0]), ['account','contact','contact-main','quote']);
 });
 test('existing C4C license blocks NEW creation and does not reserve an operation', async () => {
   const ctx = fixture({ accounts: [{ AccountID: '10003953', RoleCode: 'TEST03', LicenseNumber_KUT: '331501-0003' }] });

@@ -40,7 +40,9 @@ function requireApprovedConfiguration(config) {
     config.space !== config.allowedSpace ||
     !config.salesOrg ||
     !config.salesUnit ||
-    !config.allowedStatuses?.size
+    !config.allowedStatuses?.size ||
+    !config.createAccounts ||
+    !config.createContacts
   ) {
     throw new LicenseError(
       "LICENSE_WRITES_NOT_READY",
@@ -308,27 +310,23 @@ function createLicenseSubmitter({
         await operations.mark(id, { stage: "ACCOUNT_RESOLVED", accountID });
       }
 
-      if (config.createContacts) {
-        stage = "CONTACT_LOOKUP";
-        await operations.mark(id, { stage });
-        const contacts = await writer.findMatchingContacts(
-          accountID,
-          input.applicant.mobile,
-        );
-        if (!contacts.length) {
-          stage = "CONTACT_POST";
-          await operations.mark(id, { stage });
-          remoteWriteStarted = true;
-          await writer.createContact(accountID, input);
-          await operations.mark(id, { stage: "CONTACT_CREATED" });
-        } else if (contacts.length > 1) {
-          throw new LicenseError(
-            "AMBIGUOUS_CONTACT",
-            "Multiple matching contacts need reconciliation",
-            409,
-          );
-        }
+      stage = "CONTACT_LOOKUP";
+      await operations.mark(id, { stage, accountID });
+      const contacts = await writer.findMatchingContacts(accountID, input.applicant.mobile);
+      if (contacts.length > 1) throw new LicenseError("AMBIGUOUS_CONTACT", "Multiple matching contacts need reconciliation", 409);
+      let contactID = contacts[0]?.ContactID || '';
+      if (!contactID) {
+        stage = "CONTACT_POST";
+        await operations.mark(id, { stage, accountID });
+        remoteWriteStarted = true;
+        contactID = (await writer.createContact(accountID, input)).contactID;
+        await operations.mark(id, { stage: "CONTACT_CREATED", accountID });
       }
+      stage = "CONTACT_MAIN";
+      await operations.mark(id, { stage, accountID });
+      remoteWriteStarted = true;
+      await writer.makeContactMain(accountID, contactID);
+      await operations.mark(id, { stage: "CONTACT_MAIN_SET", accountID });
 
       stage = "QUOTE_POST";
       await operations.mark(id, { stage, accountID });

@@ -17,11 +17,12 @@ const listing = values => ({ status: 200, data: { d: { results: values } } });
 
 test('full adapter surface matches submission-service call contract', () => {
   const writer = createC4cWriter({ executeHttpRequest: async () => entity({}) });
-  for (const method of ['createAccount','findMatchingContacts','createContact','createQuote','uploadAttachment'])
+  for (const method of ['createAccount','findMatchingContacts','createContact','makeContactMain','createQuote','uploadAttachment'])
     assert.equal(typeof writer[method], 'function');
   assert.equal(buildAccountPayload(cr, input, 'TEST03').RoleCode, 'TEST03');
   assert.equal(buildQuotePayload('10001', 'TEST03', input, cfg).BuyerPartyID, '10001');
   assert.equal(buildContactPayload('10001', input).AccountID, '10001');
+  assert.equal(buildAccountPayload(cr, input, 'TEST03').CountryCode, 'SA');
 });
 
 test('direct C4C OData v2 CorporateAccount POST response extracts AccountID', async () => {
@@ -119,6 +120,20 @@ test('Contact POST and ContactCollection GET use scoped account data', async () 
   assert.deepEqual(await writer.createContact('10001',input), { contactID:'C1',objectID:'' });
   assert.equal((await writer.findMatchingContacts('10001',input.applicant.mobile))[0].ContactID,'C1');
   assert.equal(posts,1);
+});
+
+test('main contact is set through the verified account-contact relationship before a quote', async () => {
+  const calls = [];
+  const writer = createC4cWriter({ executeHttpRequest: async (_destination, request) => {
+    calls.push(request);
+    if (request.method === 'GET') return listing([{ AccountID: '10001', ContactID: 'C1', ObjectID: 'REL1' }]);
+    return { status: 204, data: null };
+  } });
+  await writer.makeContactMain('10001', 'C1');
+  assert.equal(calls[0].method, 'GET');
+  assert.match(decodeURIComponent(calls[0].url), /AccountID eq '10001'/);
+  assert.equal(calls[1].url, "/c4codataapi/CorporateAccountHasContactPersonCollection('REL1')");
+  assert.equal(calls[1].data.MainIndicator, true);
 });
 
 test('unscoped contact reads are blocked', async () => {
