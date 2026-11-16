@@ -1,23 +1,202 @@
-'use strict';
-const cds = require('@sap/cds');
-const IasService = require('./core/services/ias.service');
-const GroupService = require('./core/services/group.service');
-const { createRegistrationRepository } = require('./core/registration/registration-repository');
-const { config, crLookup, nafathIdentity } = require('./core/registration/external-clients');
-const v = require('./core/utils/validation'); const { AppError } = require('./core/utils/errors');
+"use strict";
+const cds = require("@sap/cds");
+const IasService = require("./core/services/ias.service");
+const GroupService = require("./core/services/group.service");
+const {
+  createRegistrationRepository,
+} = require("./core/registration/registration-repository");
+const {
+  config,
+  crLookup,
+  nafathIdentity,
+} = require("./core/registration/external-clients");
+const v = require("./core/utils/validation");
+const { AppError } = require("./core/utils/errors");
 
-function json(raw) { try { const value = JSON.parse(raw); if (!value || Array.isArray(value)) throw new Error(); return value; } catch (_) { throw new AppError(400, 'Invalid registration payload'); } }
-function code(value, name) { const result = v.text(value, name, { max: 32, required: true }); if (!/^[A-Za-z0-9_.-]+$/.test(result)) throw new AppError(400, `Invalid ${name}`); return result; }
-function document(value) { const result = code(value, 'document number'); if (!/^\d{8,16}$/.test(result)) throw new AppError(400, 'Invalid document number'); return result; }
-function start(raw) { const x = json(raw); return { documentType: code(x.documentType, 'document type'), documentNumber: document(x.documentNumber), nationalityId: code(x.nationalityId, 'nationality ID'), language: (v.text(x.language || 'EN', 'language', { max: 10, required: true })).toUpperCase() }; }
-function registration(raw) { const x = json(raw); return { documentType: code(x.documentType, 'document type'), documentNumber: document(x.documentNumber), email: v.email(x.email), mobile: document(x.mobile), phoneCountryCode: v.text(x.phoneCountryCode || '+966', 'phone country code', { max: 10, required: true }), disclaimerAccepted: x.disclaimerAccepted === true }; }
-function identity(data, input) { if (String(data?.id || '') !== input.documentNumber) throw new AppError(403, 'Nafath identity does not match the registration document'); return { firstName: v.text(data['first_name#en'] || data['first_name#ar'], 'validated first name', { max: 100, required: true }), fatherName: v.text(data['father_name#en'] || '', 'validated father name', { max: 100 }), grandName: v.text(data['grand_name#en'] || '', 'validated grandfather name', { max: 100 }), familyName: v.text(data['family_name#en'] || data['family_name#ar'], 'validated family name', { max: 100, required: true }), gender: v.text(data.Gender || '', 'validated gender', { max: 20 }), dateOfBirth: typeof data['dob#g'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data['dob#g']) ? data['dob#g'] : null, documentType: input.documentType, documentNumber: input.documentNumber }; }
+function json(raw) {
+  try {
+    const value = JSON.parse(raw);
+    if (!value || Array.isArray(value)) throw new Error();
+    return value;
+  } catch (_) {
+    throw new AppError(400, "Invalid registration payload");
+  }
+}
+function code(value, name) {
+  const result = v.text(value, name, { max: 32, required: true });
+  if (!/^[A-Za-z0-9_.-]+$/.test(result))
+    throw new AppError(400, `Invalid ${name}`);
+  return result;
+}
+function document(value) {
+  const result = code(value, "document number");
+  if (!/^\d{8,16}$/.test(result))
+    throw new AppError(400, "Invalid document number");
+  return result;
+}
+function start(raw) {
+  const x = json(raw);
+  return {
+    documentType: code(x.documentType, "document type"),
+    documentNumber: document(x.documentNumber),
+    nationalityId: code(x.nationalityId, "nationality ID"),
+    language: v
+      .text(x.language || "EN", "language", { max: 10, required: true })
+      .toUpperCase(),
+  };
+}
+function registration(raw) {
+  const x = json(raw);
+  return {
+    documentType: code(x.documentType, "document type"),
+    documentNumber: document(x.documentNumber),
+    email: v.email(x.email),
+    mobile: document(x.mobile),
+    phoneCountryCode: v.text(
+      x.phoneCountryCode || "+966",
+      "phone country code",
+      { max: 10, required: true },
+    ),
+    disclaimerAccepted: x.disclaimerAccepted === true,
+  };
+}
+function identity(data, input) {
+  if (String(data?.id || "") !== input.documentNumber)
+    throw new AppError(
+      403,
+      "Nafath identity does not match the registration document",
+    );
+  return {
+    firstName: v.text(
+      data["first_name#en"] || data["first_name#ar"],
+      "validated first name",
+      { max: 100, required: true },
+    ),
+    fatherName: v.text(data["father_name#en"] || "", "validated father name", {
+      max: 100,
+    }),
+    grandName: v.text(
+      data["grand_name#en"] || "",
+      "validated grandfather name",
+      { max: 100 },
+    ),
+    familyName: v.text(
+      data["family_name#en"] || data["family_name#ar"],
+      "validated family name",
+      { max: 100, required: true },
+    ),
+    gender: v.text(data.Gender || "", "validated gender", { max: 20 }),
+    dateOfBirth:
+      typeof data["dob#g"] === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(data["dob#g"])
+        ? data["dob#g"]
+        : null,
+    documentType: input.documentType,
+    documentNumber: input.documentNumber,
+  };
+}
 
 module.exports = cds.service.impl(function () {
-  let dbPromise; const db = () => (dbPromise ||= cds.connect.to('db'));
-  const reject = (req, error) => req.reject(error instanceof AppError ? error.status : 503, error instanceof AppError ? error.message : 'Registration service temporarily unavailable');
-  this.on('getRegistrationLists', async req => { try { const lists = await cds.connect.to('ListService'); const rows = []; for (const list of ['CR_NATIONALITY', 'CR_IDENTIFIER_TYPE']) { const definition = await lists.send('getList', { app: 'PORTAL', code: list }); for (const item of definition?.items || []) rows.push({ key: item.key, title: item.title, titleAr: item.titleAr, list }); } return rows; } catch (e) { return reject(req, e); } });
-  this.on('startNafathValidation', async req => { try { const input = start(req.data.input); const repo = createRegistrationRepository(await db()); if (await repo.documentExists(input.documentNumber)) throw new AppError(409, 'An account already exists for this document'); await crLookup(input); await repo.startValidation(input); return { status: 'WAITING', loginUrl: config().loginUrl }; } catch (e) { return reject(req, e); } });
-  this.on('nafathStatus', async req => { try { const repo = createRegistrationRepository(await db()); const row = await repo.validation(document(req.data.documentNumber)); return { status: row?.VALIDATION_NAFATH_STATUS || 'NOT_FOUND', validated: row?.VALIDATION_NAFATH_STATUS === 'VALID' }; } catch (e) { return reject(req, e); } });
-  this.on('completeRegistration', async req => { try { const input = registration(req.data.input); if (!input.disclaimerAccepted) throw new AppError(400, 'Registration declaration must be accepted'); const repo = createRegistrationRepository(await db()); if (await repo.documentExists(input.documentNumber) || await repo.emailExists(input.email)) throw new AppError(409, 'An account already exists for this identity or email'); const row = await repo.validation(input.documentNumber); if (!row || row.VALIDATION_NAFATH_STATUS !== 'VALID' || !row.API_RESP_JSON) throw new AppError(422, 'Complete Nafath validation before registering'); const verified = identity(JSON.parse(row.API_RESP_JSON), input); const ias = new IasService(); const created = await ias.createUser({ userName: input.email, email: input.email, givenName: verified.firstName, familyName: verified.familyName }); const groupId = process.env.MAWANI_POA_AGENT_GROUP_ID; if (!groupId) throw new AppError(503, 'POA agent group is not configured'); await new GroupService().setUserMembership({ userId: created.id, groupId, assigned: true }); await repo.createUser({ ias: created, input, identity: verified }); return { iasId: created.id, status: 'CREATED' }; } catch (e) { return reject(req, e); } });
+  let dbPromise;
+  const db = () => (dbPromise ||= cds.connect.to("db"));
+  const reject = (req, error) =>
+    req.reject(
+      error instanceof AppError ? error.status : 503,
+      error instanceof AppError
+        ? error.message
+        : "Registration service temporarily unavailable",
+    );
+  this.on("getRegistrationLists", async (req) => {
+    try {
+      const lists = await cds.connect.to("ListService");
+      const rows = [];
+      for (const list of ["CR_NATIONALITY", "CR_IDENTIFIER_TYPE"]) {
+        const definition = await lists.send("getList", {
+          app: "PORTAL",
+          code: list,
+        });
+        for (const item of definition?.items || [])
+          rows.push({
+            itemKey: item.key,
+            title: item.title,
+            titleAr: item.titleAr,
+            list,
+          });
+      }
+      return rows;
+    } catch (e) {
+      return reject(req, e);
+    }
+  });
+  this.on("startNafathValidation", async (req) => {
+    try {
+      const input = start(req.data.input);
+      const repo = createRegistrationRepository(await db());
+      if (await repo.documentExists(input.documentNumber))
+        throw new AppError(409, "An account already exists for this document");
+      await crLookup(input);
+      await repo.startValidation(input);
+      return { status: "WAITING", loginUrl: config().loginUrl };
+    } catch (e) {
+      return reject(req, e);
+    }
+  });
+  this.on("nafathStatus", async (req) => {
+    try {
+      const repo = createRegistrationRepository(await db());
+      const row = await repo.validation(document(req.data.documentNumber));
+      return {
+        status: row?.VALIDATION_NAFATH_STATUS || "NOT_FOUND",
+        validated: row?.VALIDATION_NAFATH_STATUS === "VALID",
+      };
+    } catch (e) {
+      return reject(req, e);
+    }
+  });
+  this.on("completeRegistration", async (req) => {
+    try {
+      const input = registration(req.data.input);
+      if (!input.disclaimerAccepted)
+        throw new AppError(400, "Registration declaration must be accepted");
+      const repo = createRegistrationRepository(await db());
+      if (
+        (await repo.documentExists(input.documentNumber)) ||
+        (await repo.emailExists(input.email))
+      )
+        throw new AppError(
+          409,
+          "An account already exists for this identity or email",
+        );
+      const row = await repo.validation(input.documentNumber);
+      if (
+        !row ||
+        row.VALIDATION_NAFATH_STATUS !== "VALID" ||
+        !row.API_RESP_JSON
+      )
+        throw new AppError(
+          422,
+          "Complete Nafath validation before registering",
+        );
+      const verified = identity(JSON.parse(row.API_RESP_JSON), input);
+      const ias = new IasService();
+      const created = await ias.createUser({
+        userName: input.email,
+        email: input.email,
+        givenName: verified.firstName,
+        familyName: verified.familyName,
+      });
+      const groupId = process.env.MAWANI_POA_AGENT_GROUP_ID;
+      if (!groupId)
+        throw new AppError(503, "POA agent group is not configured");
+      await new GroupService().setUserMembership({
+        userId: created.id,
+        groupId,
+        assigned: true,
+      });
+      await repo.createUser({ ias: created, input, identity: verified });
+      return { iasId: created.id, status: "CREATED" };
+    } catch (e) {
+      return reject(req, e);
+    }
+  });
 });
