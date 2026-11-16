@@ -9,7 +9,8 @@ const CR = { CR_NUMBER: '1002003001', CR_NATIONAL_NUMBER: '7002612567', IS_TEST_
   BTP_ACTIVE_STATUS: 'ACTIVE', CR_STATUS: 'APPROVED', CR_NAME: 'Company', STREET: 'Road' };
 const ACCOUNT = { AccountID: 'A1', ObjectID: 'OBJ1', RoleCode: 'ZSA010', LicenseNumber_KUT: 'LIC-1', LicenseStatus_KUT: '111' };
 const CONFIG = { writesEnabled: true, contractReviewed: true, space: 'DEV', allowedSpace: 'DEV',
-  salesOrg: 'S1600', salesUnit: 'S1600', allowedStatuses: new Set(['APPROVED']), createContacts: true };
+  salesOrg: 'S1600', salesUnit: 'S1600', allowedStatuses: new Set(['APPROVED']),
+  createAccounts: true, createContacts: true };
 const INPUT = JSON.stringify({ clientRequestId: '9c9664ef-acf6-4c0b-89ab-7f45f60ea565', accountId: 'A1', licenseNumber: 'LIC-1',
   licenseType: 'ZSA010', crNumber: CR.CR_NUMBER, crNationalNumber: CR.CR_NATIONAL_NUMBER,
   applicant: { name: 'Applicant', id: '123', documentType: '1', mobile: '0500000000', email: 'a@example.com' }, address: {}, attachments: [] });
