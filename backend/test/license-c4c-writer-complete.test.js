@@ -122,6 +122,29 @@ test('Contact POST and ContactCollection GET use scoped account data', async () 
   assert.equal(posts,1);
 });
 
+test('confirmed Contact POST with no identifier performs one scoped read-back, never retries POST', async () => {
+  const methods = [];
+  const writer = createC4cWriter({ executeHttpRequest: async (_destination, request) => {
+    methods.push(request.method);
+    if (request.method === 'POST') return entity({ ObjectID: 'CONTACT_OBJECT_ONLY' });
+    assert.match(decodeURIComponent(request.url), /AccountID eq '10001'/);
+    assert.match(decodeURIComponent(request.url), /Mobile eq '0500000000'/);
+    return listing([{ AccountID: '10001', Mobile: input.applicant.mobile, ContactID: 'C1', ObjectID: 'CONTACT_OBJECT_ONLY' }]);
+  } });
+  assert.deepEqual(await writer.createContact('10001', input), { contactID: 'C1', objectID: 'CONTACT_OBJECT_ONLY' });
+  assert.deepEqual(methods, ['POST', 'GET']);
+});
+
+test('Contact read-back without one verified ContactID remains uncertain and never retries POST', async () => {
+  let posts = 0;
+  const writer = createC4cWriter({ executeHttpRequest: async (_destination, request) => {
+    if (request.method === 'POST') { posts += 1; return entity({}); }
+    return listing([]);
+  } });
+  await assert.rejects(writer.createContact('10001', input), error => error.code === 'C4C_WRITE_UNCERTAIN');
+  assert.equal(posts, 1);
+});
+
 test('main contact is set through the verified account-contact relationship before a quote', async () => {
   const calls = [];
   const writer = createC4cWriter({ executeHttpRequest: async (_destination, request) => {
