@@ -1,0 +1,78 @@
+@baseUrl = https://mawani-btp-dev-mawani-btp-dev-sp-mawani-portal-router.cfapps.sa30.hana.ondemand.com
+# Use a normal portal user token for the questions and submit requests.
+@accessToken = REPLACE_WITH_IAS_ACCESS_TOKEN
+# Use a token from a user in MAWANI_PORTAL_ADMIN_GROUP_ID for question management and reports.
+@adminAccessToken = REPLACE_WITH_ADMIN_IAS_ACCESS_TOKEN
+@appId = LICENSES
+@requestUuid = REPLACE_WITH_COMPLETED_REQUEST_UUID
+@questionId = REPLACE_WITH_EVALUATION_QUESTION_UUID
+
+### Service metadata
+GET {{baseUrl}}/service-evaluations/$metadata
+Authorization: Bearer {{accessToken}}
+Accept: application/xml
+
+### Read active questions for one application
+GET {{baseUrl}}/service-evaluations/getEvaluationQuestions(appId='{{appId}}')
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Fetch a CSRF token for evaluation submission and administrator changes
+# @name csrf
+GET {{baseUrl}}/service-evaluations/
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: Fetch
+Accept: application/json
+
+@csrfToken = {{csrf.response.headers.x-csrf-token}}
+
+### Submit one evaluation after a completed application request
+# Include one answer for every active question returned above. Comment is optional.
+POST {{baseUrl}}/service-evaluations/submitServiceEvaluation
+Authorization: Bearer {{accessToken}}
+X-CSRF-Token: {{csrfToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "payload": "{\"requestUuid\":\"{{requestUuid}}\",\"appId\":\"{{appId}}\",\"answers\":[{\"questionId\":\"{{questionId}}\",\"score\":5,\"comment\":\"Fast and clear service\"}]}"
+}
+
+### Administrator: fetch a CSRF token
+# @name adminCsrf
+GET {{baseUrl}}/service-evaluations/
+Authorization: Bearer {{adminAccessToken}}
+X-CSRF-Token: Fetch
+Accept: application/json
+
+@adminCsrfToken = {{adminCsrf.response.headers.x-csrf-token}}
+
+### Administrator: add a question (or include "id" to edit an existing one)
+POST {{baseUrl}}/service-evaluations/upsertEvaluationQuestion
+Authorization: Bearer {{adminAccessToken}}
+X-CSRF-Token: {{adminCsrfToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "payload": "{\"appId\":\"{{appId}}\",\"question\":\"How satisfied are you with this service?\",\"questionAr\":\"ما مدى رضاك عن هذه الخدمة؟\",\"minScore\":1,\"maxScore\":5,\"displayOrder\":1,\"active\":true}"
+}
+
+### Administrator: archive a question while keeping historic report answers
+POST {{baseUrl}}/service-evaluations/archiveEvaluationQuestion
+Authorization: Bearer {{adminAccessToken}}
+X-CSRF-Token: {{adminCsrfToken}}
+Content-Type: application/json
+Accept: application/json
+
+{ "questionId": "{{questionId}}" }
+
+### Administrator: application-level management report for a date range
+GET {{baseUrl}}/service-evaluations/getEvaluationReport(startDate='2026-11-01',endDate='2026-11-30',appId='{{appId}}')
+Authorization: Bearer {{adminAccessToken}}
+Accept: application/json
+
+### Administrator: per-question management report for a date range
+GET {{baseUrl}}/service-evaluations/getQuestionEvaluationReport(startDate='2026-11-01',endDate='2026-11-30',appId='{{appId}}')
+Authorization: Bearer {{adminAccessToken}}
+Accept: application/json
