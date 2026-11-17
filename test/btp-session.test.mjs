@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { PortalSessionError, bootstrapPortalProfile, provisionAndReadProfile, readOnlyProfile, validateProfile } from '../src/services/portalSession.js'
+import { PortalSessionError, bootstrapPortalProfile, isLocalUiPreview, provisionAndReadProfile, readOnlyProfile, validateProfile } from '../src/services/portalSession.js'
 import { toPortalUser, toProfileDetails } from '../src/services/portalProfile.js'
 
 const profile = Object.freeze({
@@ -39,6 +39,12 @@ test('provisions via CSRF POST then verifies profile via read-only GET; no brows
     assert.equal(call.options.credentials, 'same-origin')
     assert.equal(call.options.headers?.Authorization, undefined)
   }
+})
+
+test('local UI preview requires both an explicit flag and a Vite development build', () => {
+  assert.equal(isLocalUiPreview({ DEV: true, VITE_PORTAL_PREVIEW_MODE: 'true' }), true)
+  assert.equal(isLocalUiPreview({ DEV: true, VITE_PORTAL_PREVIEW_MODE: 'false' }), false)
+  assert.equal(isLocalUiPreview({ DEV: false, VITE_PORTAL_PREVIEW_MODE: 'true' }), false)
 })
 
 test('missing CSRF token prevents any write', async () => {

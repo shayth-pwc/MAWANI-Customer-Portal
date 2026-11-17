@@ -12,6 +12,22 @@ export class PortalSessionError extends Error {
   }
 }
 
+const LOCAL_UI_PROFILE = Object.freeze({
+  UUID: '00000000-0000-4000-8000-000000000001',
+  IAS_ID: 'local-ui-preview',
+  FNAME: 'Local',
+  LNAME: 'Preview',
+  EMAIL: 'local-ui-preview@invalid.example',
+  ACCOUNT_TYPE: 'companies',
+  ACTIVE_STATUS: true,
+})
+
+// This mode is deliberately limited to the Vite development server.  A value
+// embedded in a production build cannot disable IAS, App Router, or CSRF.
+export function isLocalUiPreview(env = import.meta.env) {
+  return env?.DEV === true && env?.VITE_PORTAL_PREVIEW_MODE === 'true'
+}
+
 async function requestJson(url, options = {}, fetcher = fetch) {
   let response
   try {
@@ -104,6 +120,7 @@ export async function provisionAndReadProfile(fetcher = fetch) {
 
 let inFlight = null
 export function bootstrapPortalProfile() {
+  if (isLocalUiPreview()) return Promise.resolve({ ...LOCAL_UI_PROFILE })
   if (!inFlight) {
     inFlight = provisionAndReadProfile().finally(() => { inFlight = null })
   }
@@ -111,6 +128,7 @@ export function bootstrapPortalProfile() {
 }
 
 export function readOnlyProfile(fetcher = fetch) {
+  if (isLocalUiPreview()) return Promise.resolve({ ...LOCAL_UI_PROFILE })
   return requestJson('/profile/me()', {
     method: 'GET',
     headers: { Accept: 'application/json' },
@@ -122,6 +140,10 @@ export function startIasSignIn() {
 }
 
 export function logoutFromPortal() {
+  if (isLocalUiPreview()) {
+    window.location.assign('/signed-out')
+    return
+  }
   // '/logout' is handled by SAP App Router's configured central logout endpoint.
   window.location.assign('/logout')
 }
